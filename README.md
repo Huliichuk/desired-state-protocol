@@ -1,5 +1,10 @@
 # DSP — Desired State Protocol
 
+[![CI](https://github.com/Huliichuk/desired-state-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/Huliichuk/desired-state-protocol/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Protocol](https://img.shields.io/badge/protocol-0.1.0-informational.svg)](SPEC.md)
+[![Docs](https://img.shields.io/badge/docs-huliichuk.github.io-brightgreen.svg)](https://huliichuk.github.io/desired-state-protocol/)
+
 ```
 DSP is an open protocol for declarative, verifiable execution by AI agents.
 
@@ -428,6 +433,7 @@ if the published schemas drift from their TypeScript source of truth.
 | [docs/provider-authoring.md](docs/provider-authoring.md) | writing a provider                      |
 | [docs/interoperability.md](docs/interoperability.md)     | APIs, MCP, CI/CD                        |
 | [docs/operations.md](docs/operations.md)                 | running and operating a runtime         |
+| [deploy/README.md](deploy/README.md)                     | deploying the docs site and a runtime   |
 
 ## License
 
