@@ -1,6 +1,6 @@
 {
   "name": "@dsp/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The DSP runtime: registry, lifecycle orchestration and persistence",
   "type": "module",
   "license": "Apache-2.0",
