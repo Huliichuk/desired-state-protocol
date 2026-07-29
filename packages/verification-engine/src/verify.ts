@@ -3,6 +3,7 @@ import {
   canonicalEquals,
   flattenValue,
   pathMatchesAny,
+  type ContractCheck,
   type ResourceProjection,
   type ResourceTypeDefinition,
   type VerificationMismatch,
@@ -17,6 +18,12 @@ export interface VerifyInput {
   observedProjection: ResourceProjection
   resourceTypes: ReadonlyMap<string, ResourceTypeDefinition>
   now: Date
+  /**
+   * The client's success conditions, already evaluated against the observed state.
+   * Structural agreement and goal achievement are reported side by side because
+   * they are different claims.
+   */
+  contract?: ContractCheck | null
 }
 
 /**
@@ -81,6 +88,7 @@ export function verifyDesiredState(input: VerifyInput): VerificationResult {
     verifiedAt: input.now.toISOString(),
     matched,
     unmatched,
+    contract: input.contract ?? null,
   }
 }
 
@@ -94,6 +102,7 @@ export function verificationFailed(
   operationId: string,
   reason: string,
   now: Date,
+  contract: ContractCheck | null = null,
 ): VerificationResult {
   return {
     operationId,
@@ -102,6 +111,7 @@ export function verificationFailed(
     verifiedAt: now.toISOString(),
     matched: [],
     unmatched: [{ path: '', reason }],
+    contract,
   }
 }
 

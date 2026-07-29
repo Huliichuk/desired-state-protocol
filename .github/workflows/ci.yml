@@ -33,6 +33,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # Package tsconfigs build `src` only, so without this the test files are
+      # never typechecked and can drift from the protocol unnoticed.
+      - name: Typecheck the tests
+        run: pnpm typecheck:tests
+
       - name: Lint
         run: pnpm lint
 

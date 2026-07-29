@@ -154,6 +154,85 @@ credentials:
 NOT** derive authorization or policy scope from them. In particular the evaluated
 environment MUST come from runtime configuration (§21).
 
+### 5.1 The contract
+
+A document MAY carry a contract, beside `spec` rather than inside it: it is protocol
+machinery, so every provider gets it without modelling anything.
+
+```ts
+interface DesiredStateContract {
+  goal?: string
+  constraints?: ContractPredicate[]
+  success?: ContractPredicate[]
+}
+
+interface ContractPredicate {
+  id: string
+  expression: string
+  message?: string
+}
+```
+
+A document states the shape a system should have. A contract states what that shape
+was _for_. Without one, verification can only answer whether the world matches the
+document, which is a different question from whether the change achieved anything: a
+document that asks for an inactive subscription verifies perfectly and bills nobody.
+
+**Expressions.** An expression MUST be a [CEL](https://cel.dev) expression that
+evaluates to a boolean. A runtime MUST NOT accept a Turing-complete expression
+language here: a predicate is evaluated by the runtime on a client's behalf, so it
+MUST terminate in bounded time.
+
+The evaluation environment MUST expose exactly one binding:
+
+```
+resources: list of { type: string, key: string, attributes: map }
+```
+
+A runtime **MUST NOT** expose the environment, the actor, the tenant, the policy
+bundle or the clock to a contract expression. An expression able to read the
+environment would appear to reason about trust, and it MUST NOT be able to.
+
+**Evaluation is total.** A predicate that cannot be evaluated — a syntax error, an
+unknown binding, a missing field, a non-boolean result — MUST be reported as an
+error and MUST NOT be reported as a plain `false`. "The answer is no" and "there is
+no answer" are different findings, and a contract that silently reads as unsatisfied
+because of a typo is worse than one that names the typo.
+
+```ts
+interface PredicateResult {
+  id: string
+  expression: string
+  satisfied: boolean
+  message: string | null
+  error: string | null
+}
+
+interface ContractCheck {
+  goal: string | null
+  predicates: PredicateResult[]
+  satisfied: boolean
+}
+```
+
+`satisfied` on a `ContractCheck` MUST be true only when every predicate was
+evaluated and every one held.
+
+**Constraints** are evaluated at plan time against the desired projection.
+**Success** conditions are evaluated after apply against the projection of the state
+the provider actually reports (§17).
+
+A runtime MUST reject a document whose contract cannot be evaluated, with
+`CONTRACT_PREDICATE_INVALID`, at validate time rather than at plan time. Predicate
+ids MUST be unique within a group so a result can always be attributed. A runtime
+MUST bound the number of predicates and the length of an expression.
+
+**Constraints are a self-check, not an access control.** A client chooses its own
+constraints and MAY choose weak ones, exactly as it MAY claim a weak environment
+(§21). A runtime **MUST NOT** treat a constraint as an authorization decision.
+Operator-imposed limits live in the policy bundle (§11), which a client cannot
+influence. A document with no constraints is not less safe than one with many.
+
 ## 6. Current state and revisions
 
 ```ts
@@ -381,7 +460,10 @@ A plan MUST be immutable once created.
 `planHash` MUST be the canonical hash of exactly:
 
 `apiVersion`, `kind`, `desiredStateHash`, `currentStateHash`, `policyBundleHash`,
-`summary`, `changes`, `approvals`, `policyEvaluation`, `executable`.
+`summary`, `changes`, `approvals`, `policyEvaluation`, `contract`, `executable`.
+
+Covering `contract` means a changed goal produces a different plan, so an approval
+cannot carry across a change of intent even when the resulting changes are identical.
 
 It MUST NOT cover `metadata.id`, `metadata.createdAt` or `metadata.expiresAt`.
 Timestamps are not part of intent, and including them would make planning
@@ -416,9 +498,16 @@ re-plan MAY open a new one, and §14 then invalidates approvals from the old win
 
 ### 12.4 Executability
 
-`executable` MUST be `policyEvaluation.allowed`. Blocked changes do not make a plan
-non-executable: they are skipped at apply time, and verification then reports that
-the desired state does not hold.
+`executable` MUST be `policyEvaluation.allowed` and, when the document declared
+constraints, `contract.satisfied`. A document whose own declared bounds do not hold
+is internally contradictory and MUST NOT be applied.
+
+`plan.contract` MUST be the evaluated constraints, or `null` when the document
+declared no contract at all. A runtime MUST NOT report an absent contract as a
+vacuously satisfied one.
+
+Blocked changes do not make a plan non-executable: they are skipped at apply time,
+and verification then reports that the desired state does not hold.
 
 ## 13. Provider refinement
 
@@ -526,6 +615,11 @@ Final operation status MUST be:
 | otherwise, with any failure, block or dependency skip       | `partially_completed` |
 | cancellation observed before completion                     | `cancelled`           |
 
+After verification (§17) a `completed` operation MUST become `goal_not_satisfied`
+when the document declared success conditions and they do not hold. Structural
+failure takes precedence: if the observed state also disagrees with the document,
+the status MUST be `verification_failed`, because that is the more basic problem.
+
 A runtime MUST NOT roll back succeeded changes on a later failure in 0.1.
 Compensation is out of scope for this version.
 
@@ -545,6 +639,12 @@ interface VerificationResult {
   unmatched: VerificationMismatch[]
 }
 ```
+
+`verification.contract` MUST carry the evaluated success conditions, or `null` when
+the document declared none. Structural agreement and goal achievement MUST be
+reported side by side and MUST NOT be collapsed into one value: they are different
+claims, and an implementation that reports only the first can report success for a
+change that achieved nothing.
 
 `satisfaction` MUST be the fraction of checked leaf paths that matched, in `0..1`.
 Only paths present in the desired projection are checked: **extra observed
@@ -614,6 +714,8 @@ message.
 | `SECRET_NOT_FOUND`           | 400  | no        | A referenced secret is not configured.              |
 | `SECRET_ACCESS_DENIED`       | 403  | no        | A secret was requested that was not declared.       |
 | `POLICY_DENIED`              | 403  | no        | Policy refused the plan.                            |
+| `CONTRACT_VIOLATED`          | 422  | no        | A declared constraint does not hold.                |
+| `CONTRACT_PREDICATE_INVALID` | 422  | no        | A contract expression cannot be evaluated.          |
 | `APPROVAL_REQUIRED`          | 409  | no        | The plan needs approval it does not have.           |
 | `APPROVAL_INVALID`           | 409  | no        | The approval does not match the plan.               |
 | `PLAN_NOT_FOUND`             | 404  | no        | No such plan.                                       |

@@ -17,6 +17,7 @@ export default defineConfig({
       '@dsp/secret-store': src('secret-store'),
       '@dsp/provider-sdk': src('provider-sdk'),
       '@dsp/policy-engine': src('policy-engine'),
+      '@dsp/contract-engine': src('contract-engine'),
       '@dsp/plan-engine': src('plan-engine'),
       '@dsp/execution-engine': src('execution-engine'),
       '@dsp/verification-engine': src('verification-engine'),

@@ -1,4 +1,5 @@
 import type { JsonSchema } from '../types/common.js'
+import { contractCheckSchema } from './fragments.js'
 
 export const resultSchema: JsonSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -35,6 +36,7 @@ export const resultSchema: JsonSchema = {
         'completed',
         'failed',
         'verification_failed',
+        'goal_not_satisfied',
         'cancelled',
       ],
     },
@@ -88,7 +90,15 @@ export const resultSchema: JsonSchema = {
         {
           type: 'object',
           additionalProperties: false,
-          required: ['operationId', 'status', 'satisfaction', 'verifiedAt', 'matched', 'unmatched'],
+          required: [
+            'operationId',
+            'status',
+            'satisfaction',
+            'verifiedAt',
+            'matched',
+            'unmatched',
+            'contract',
+          ],
           properties: {
             operationId: { type: 'string' },
             status: {
@@ -116,6 +126,7 @@ export const resultSchema: JsonSchema = {
                 },
               },
             },
+            contract: contractCheckSchema,
           },
         },
       ],

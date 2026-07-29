@@ -5,6 +5,7 @@
     { "path": "./packages/secret-store" },
     { "path": "./packages/provider-sdk" },
     { "path": "./packages/policy-engine" },
+    { "path": "./packages/contract-engine" },
     { "path": "./packages/plan-engine" },
     { "path": "./packages/execution-engine" },
     { "path": "./packages/verification-engine" },

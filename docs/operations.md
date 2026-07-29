@@ -210,8 +210,12 @@ pipeline can branch on them without parsing output.
 | `9`  | auditChainBroken | `audit verify` found a break.                                       |
 
 `dsp plan` returns `4` when the plan is not executable, and `dsp apply` returns `6`
-for both `partially_completed` and `verification_failed` — in both cases the desired
-state is not true.
+for `partially_completed`, `verification_failed` and `goal_not_satisfied` — in every
+case what was wanted is not true.
+
+`goal_not_satisfied` is the sharpest of the three: every change succeeded, the world
+matches the document, and the document's own success conditions still do not hold.
+See [the contract section of SPEC.md](../SPEC.md#51-the-contract).
 
 ## Running it as a service
 

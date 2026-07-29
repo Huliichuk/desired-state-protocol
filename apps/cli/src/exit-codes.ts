@@ -27,6 +27,8 @@ const BY_CODE: Partial<Record<DSPErrorCode, ExitCode>> = {
   APPROVAL_REQUIRED: EXIT.approvalRequired,
   APPROVAL_INVALID: EXIT.approvalRequired,
   POLICY_DENIED: EXIT.policyDenied,
+  CONTRACT_VIOLATED: EXIT.policyDenied,
+  CONTRACT_PREDICATE_INVALID: EXIT.invalidDocument,
   DESTRUCTIVE_ACTION_BLOCKED: EXIT.policyDenied,
   STATE_DRIFT_DETECTED: EXIT.stateDrift,
   PLAN_EXPIRED: EXIT.planExpired,

@@ -127,6 +127,56 @@ cheap, deterministic and testable — but it is a trade, not a free win.
 DSP through MCP (see [docs/interoperability.md](docs/interoperability.md)); nothing
 in DSP depends on MCP.
 
+## Desired State Contract
+
+A document describes the shape a system should have. A contract describes what that
+shape was **for**.
+
+```yaml
+contract:
+  goal: the founder can be billed monthly
+  constraints:
+    - id: price-cap
+      expression: >-
+        resources.filter(r, r.type == "mock.subscription")
+          .all(s, s.attributes.amountCents <= 10000)
+  success:
+    - id: billing-active
+      expression: >-
+        resources.exists(r, r.type == "mock.subscription" && r.attributes.active == true)
+      message: No active subscription exists, so nobody can be billed
+```
+
+Constraints are checked at plan time against the desired state; success conditions
+after apply, against the state the provider actually reports. Expressions are
+[CEL](https://cel.dev) and see exactly one binding — the resources — so a document
+can never appear to reason about trust.
+
+This closes a real gap. A document asking for `active: false` matches the world
+perfectly and bills nobody, so DSP used to report it as a complete success:
+
+```
+Operation: op_2f5bd1fe974f39b92bb75330
+Status:    goal_not_satisfied
+Verified:  satisfied (satisfaction 100%)
+
+Goal:
+  the founder can be billed monthly
+  ✗ not satisfied (2 conditions)
+    ✗ billing-active
+        No active subscription exists, so nobody can be billed
+    ✓ admin-can-sign-in
+```
+
+Structural verification still says `satisfied`, because the world does match the
+document. The two claims are reported side by side and never collapsed: an
+implementation that reports only the first can report success for a change that
+achieved nothing.
+
+**A constraint is a self-check, not an access control.** A client picks its own
+constraints and may pick weak ones. Operator limits live in the policy bundle, which
+no document can influence.
+
 ## Core lifecycle
 
 ```
@@ -318,8 +368,10 @@ Note what is absent: no ordering, no ids, no calls, no credentials. Labels are
 metadata only — the runtime takes its environment from its own configuration, so a
 label can never argue its way into a weaker policy.
 
-Two more examples ship alongside it: an updated document that produces `UPDATE`
-and `NOOP` changes, and one that violates immutable fields and is refused.
+Three more examples ship alongside it: an updated document that produces `UPDATE`
+and `NOOP` changes, one that violates immutable fields and is refused, and
+[one that declares a contract](examples/mock-workspace/desired-state-with-contract.yaml)
+and is reported as `goal_not_satisfied` despite every change succeeding.
 
 ## Provider architecture
 
@@ -400,7 +452,7 @@ without giving anyone a write-capable tool surface.
 
 DSP 0.1 is complete and tested for the mock provider:
 
-- 513 automated tests, including a provider conformance suite
+- 560 automated tests, including a provider conformance suite
 - deterministic plans: identical inputs produce an identical plan hash and id
 - policy engine, risk engine and audit chain, none of which use a model
 - drift detection, idempotent apply, mandatory verification

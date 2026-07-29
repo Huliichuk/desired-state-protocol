@@ -13,6 +13,12 @@ export type OperationStatus =
   | 'completed'
   | 'failed'
   | 'verification_failed'
+  /**
+   * Every change succeeded and the world matches the document, but the client's
+   * own success conditions do not hold. The mechanism worked and the point was
+   * missed, which is worth its own status rather than being reported as success.
+   */
+  | 'goal_not_satisfied'
   | 'cancelled'
 
 export const TERMINAL_OPERATION_STATUSES: readonly OperationStatus[] = [
@@ -20,6 +26,7 @@ export const TERMINAL_OPERATION_STATUSES: readonly OperationStatus[] = [
   'completed',
   'failed',
   'verification_failed',
+  'goal_not_satisfied',
   'cancelled',
 ] as const
 

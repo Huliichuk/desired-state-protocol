@@ -1,3 +1,5 @@
+import type { ContractCheck } from './contract.js'
+
 export type VerificationStatus =
   'satisfied' | 'partially_satisfied' | 'not_satisfied' | 'verification_failed'
 
@@ -16,4 +18,10 @@ export interface VerificationResult {
   verifiedAt: string
   matched: string[]
   unmatched: VerificationMismatch[]
+  /**
+   * The client's success conditions, evaluated against the state the provider
+   * actually reports. Null when the document declared none — in which case DSP can
+   * only report structural agreement, which is where it stood before contracts.
+   */
+  contract: ContractCheck | null
 }

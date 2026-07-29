@@ -1,0 +1,32 @@
+{
+  // Every package tsconfig builds `src` only, so until this file existed no test
+  // was typechecked at all. A test that referenced a field the protocol no longer
+  // has, or was missing one it had gained, failed nowhere: vitest strips types
+  // without checking them.
+  //
+  // This config checks the tests against package *sources* and emits nothing.
+  // Run through `pnpm typecheck:tests`, and in CI alongside the build.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "baseUrl": ".",
+    "paths": {
+      "@dsp/protocol": ["./packages/protocol/src/index.ts"],
+      "@dsp/secret-store": ["./packages/secret-store/src/index.ts"],
+      "@dsp/provider-sdk": ["./packages/provider-sdk/src/index.ts"],
+      "@dsp/provider-sdk/conformance": ["./packages/provider-sdk/src/conformance/index.ts"],
+      "@dsp/policy-engine": ["./packages/policy-engine/src/index.ts"],
+      "@dsp/contract-engine": ["./packages/contract-engine/src/index.ts"],
+      "@dsp/plan-engine": ["./packages/plan-engine/src/index.ts"],
+      "@dsp/execution-engine": ["./packages/execution-engine/src/index.ts"],
+      "@dsp/verification-engine": ["./packages/verification-engine/src/index.ts"],
+      "@dsp/audit": ["./packages/audit/src/index.ts"],
+      "@dsp/provider-mock": ["./packages/provider-mock/src/index.ts"],
+      "@dsp/core": ["./packages/core/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/test/**/*.ts", "apps/*/test/**/*.ts", "vitest.config.ts"]
+}

@@ -36,11 +36,14 @@ export class EnvSecretStore implements SecretStore {
     }
   }
 
-  async setSecret(): Promise<void> {
+  // The parameters are unused but declared: dropping them left the concrete class
+  // with a narrower signature than the SecretStore interface, so a caller holding
+  // an EnvSecretStore could not call it the way the interface documents.
+  async setSecret(_reference: SecretReference, _value: string): Promise<void> {
     throw new DSPError('UNSUPPORTED_OPERATION', 'The environment secret store is read-only')
   }
 
-  async deleteSecret(): Promise<void> {
+  async deleteSecret(_reference: SecretReference): Promise<void> {
     throw new DSPError('UNSUPPORTED_OPERATION', 'The environment secret store is read-only')
   }
 

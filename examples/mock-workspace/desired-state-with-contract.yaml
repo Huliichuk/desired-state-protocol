@@ -1,0 +1,59 @@
+# The same workspace, but this document says what it is FOR.
+#
+# Without a contract, DSP can only verify that the world matches the document.
+# That is not the same question as "did this achieve anything": a document asking
+# for an inactive subscription verifies perfectly and bills nobody.
+#
+#   dsp plan  --file examples/mock-workspace/desired-state-with-contract.yaml
+#   dsp apply <plan-id> --confirm
+#
+# Expected: every change succeeds, structural verification reports `satisfied`,
+# and the operation still ends `goal_not_satisfied` — because `active: false`
+# means nobody can actually be billed. Flip it to true and the operation
+# completes.
+apiVersion: dsp.dev/v1alpha1
+kind: MockWorkspace
+metadata:
+  name: dsp-billing
+
+contract:
+  goal: the founder can be billed monthly
+
+  # Bounds this document declares on itself, checked before anything runs.
+  # A self-check, not an access control: the client picks these, so they catch
+  # the client's own mistakes. Operator limits live in the policy bundle.
+  constraints:
+    - id: price-cap
+      expression: >-
+        resources.filter(r, r.type == "mock.subscription")
+          .all(s, s.attributes.amountCents <= 10000)
+      message: No subscription may exceed 100.00
+
+    - id: single-admin
+      expression: >-
+        size(resources.filter(r, r.type == "mock.user" && r.attributes.role == "admin")) == 1
+      message: Exactly one admin is expected
+
+  # Conditions checked after apply against what the provider actually reports.
+  success:
+    - id: billing-active
+      expression: >-
+        resources.exists(r, r.type == "mock.subscription" && r.attributes.active == true)
+      message: No active subscription exists, so nobody can be billed
+
+    - id: admin-can-sign-in
+      expression: >-
+        resources.exists(r, r.type == "mock.user" && r.attributes.role == "admin")
+      message: No admin exists
+
+spec:
+  users:
+    - email: founder@example.com
+      role: admin
+  subscriptions:
+    - user: founder@example.com
+      plan: pro
+      amountCents: 2900
+      currency: eur
+      # Change this to `true` and the goal is met.
+      active: false

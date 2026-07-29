@@ -47,6 +47,10 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+    devDependencies:
+      fastify:
+        specifier: ^5.10.0
+        version: 5.10.0
 
   apps/server:
     dependencies:
@@ -87,11 +91,23 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/contract-engine:
+    dependencies:
+      '@bufbuild/cel':
+        specifier: ^0.6.0
+        version: 0.6.0(@bufbuild/protobuf@2.13.0)
+      '@dsp/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/core:
     dependencies:
       '@dsp/audit':
         specifier: workspace:*
         version: link:../audit
+      '@dsp/contract-engine':
+        specifier: workspace:*
+        version: link:../contract-engine
       '@dsp/execution-engine':
         specifier: workspace:*
         version: link:../execution-engine
@@ -134,6 +150,9 @@ importers:
 
   packages/plan-engine:
     dependencies:
+      '@dsp/contract-engine':
+        specifier: workspace:*
+        version: link:../contract-engine
       '@dsp/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -198,6 +217,22 @@ packages:
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
+
+  '@bufbuild/cel-spec@0.6.0':
+    resolution: {integrity: sha512-tgatB83sggFj5f5JY9UqLKFnQqzvAv+fO3/PbbS+gDOq6liYPdKqIeRRh5C7UqZnvaveZiwvotnrbCey54U4wQ==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^2.6.2
+
+  '@bufbuild/cel@0.6.0':
+    resolution: {integrity: sha512-P01tn9nx134W4ODz1mGbeS0fHCb8Cq/iF4teLrS2qQSp1qnRPQ8tReWjLZBpLPCQjN8oTkVs2oJFaEk8AvyH1Q==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^2.6.2
+
+  '@bufbuild/protobuf@2.13.0':
+    resolution: {integrity: sha512-acq7c49vxfm1ggJ95P70TX7ABDM0vxr1SYD3BB0o0jnBLB4OAqeHyKuN+cD3w80gXEDQ2zxHpR6CUeA+O/aU9g==}
+
+  '@bufbuild/re2@0.6.0':
+    resolution: {integrity: sha512-HrSjnBjk71LpKDlUnbxdN9DD24Hr5O92kCxRVHA0sEa35z6tEUjBS7YQVYBMS9npbllLtPW7tGSAWwfUKBs1Hw==}
 
   '@changesets/apply-release-plan@7.1.1':
     resolution: {integrity: sha512-9qPCm/rLx/xoOFXIHGB229+4GOL76S4MC+7tyOuTsR6+1jYlfFDQORdvwR5hDA6y4FL2BPt3qpbcQIS+dW85LA==}
@@ -1541,6 +1576,20 @@ packages:
 snapshots:
 
   '@babel/runtime@7.29.7': {}
+
+  '@bufbuild/cel-spec@0.6.0(@bufbuild/protobuf@2.13.0)':
+    dependencies:
+      '@bufbuild/protobuf': 2.13.0
+
+  '@bufbuild/cel@0.6.0(@bufbuild/protobuf@2.13.0)':
+    dependencies:
+      '@bufbuild/cel-spec': 0.6.0(@bufbuild/protobuf@2.13.0)
+      '@bufbuild/protobuf': 2.13.0
+      '@bufbuild/re2': 0.6.0
+
+  '@bufbuild/protobuf@2.13.0': {}
+
+  '@bufbuild/re2@0.6.0': {}
 
   '@changesets/apply-release-plan@7.1.1':
     dependencies:

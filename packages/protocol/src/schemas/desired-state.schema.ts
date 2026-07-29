@@ -1,5 +1,6 @@
 import type { JsonSchema } from '../types/common.js'
 import { DSP_API_VERSION } from '../version.js'
+import { contractSchema } from './fragments.js'
 
 /**
  * The envelope every Desired State document MUST satisfy. `spec` is validated
@@ -50,6 +51,7 @@ export const desiredStateSchema: JsonSchema = {
         requestId: { type: 'string', maxLength: 128 },
       },
     },
+    contract: contractSchema,
     spec: { type: 'object' },
   },
 }

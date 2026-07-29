@@ -27,6 +27,7 @@ import { AuditLog, type AuditQuery, type AuditStore } from '@dsp/audit'
 import { executePlan, type Sleep } from '@dsp/execution-engine'
 import { buildPlan, computePlanHash, isPlanExpired } from '@dsp/plan-engine'
 import { evaluatePolicies, policyBundleHash } from '@dsp/policy-engine'
+import { evaluatePredicates, validateContract } from '@dsp/contract-engine'
 import type {
   DSPProvider,
   Logger,
@@ -200,7 +201,11 @@ export class DSPRuntime {
     const { context, dispose } = this.#providerContext(provider, document)
     try {
       const providerResult = await provider.validate(context, document)
-      const result = mergeValidationResults({ valid: true, errors, warnings }, providerResult)
+      const result = mergeValidationResults(
+        { valid: true, errors, warnings },
+        providerResult,
+        validateContract(document.contract),
+      )
       await this.#recordValidation(input, result)
       return result
     } finally {
@@ -273,6 +278,17 @@ export class DSPRuntime {
             risk,
             context: this.#policyContext(document),
           }),
+        // The client's own bounds, checked against what it asked for. A document
+        // that contradicts itself never reaches a provider. Null rather than a
+        // vacuously satisfied check when no contract was declared at all.
+        contract:
+          document.contract === undefined
+            ? null
+            : evaluatePredicates(
+                document.contract.goal,
+                document.contract.constraints,
+                desiredProjection,
+              ),
         ...(refine === undefined
           ? {}
           : {
@@ -627,6 +643,13 @@ export class DSPRuntime {
       )
     }
 
+    const contractResult = validateContract(document.contract)
+    if (!contractResult.valid) {
+      throw new DSPError('CONTRACT_PREDICATE_INVALID', 'The contract cannot be evaluated', {
+        details: { errors: contractResult.errors },
+      })
+    }
+
     const provider = this.#registry.providerForKind(kind.kind)
     const { context, dispose } = this.#providerContext(provider, document)
     try {
@@ -870,12 +893,23 @@ export class DSPRuntime {
         })
       } else {
         const observed = await provider.inspect(context, record.desiredState)
+        const observedProjection = await provider.normalizeCurrent(observed)
         verification = verifyDesiredState({
           operationId: operation.id,
           desiredProjection: await provider.normalizeDesired(record.desiredState),
-          observedProjection: await provider.normalizeCurrent(observed),
+          observedProjection,
           resourceTypes: this.#registry.resourceTypeMap(),
           now: this.#now(),
+          // Evaluated against the state the provider actually reports, not against
+          // the document: that is the whole point of a success condition.
+          contract:
+            record.desiredState.contract === undefined
+              ? null
+              : evaluatePredicates(
+                  record.desiredState.contract.goal,
+                  record.desiredState.contract.success,
+                  observedProjection,
+                ),
         })
       }
 
@@ -912,10 +946,17 @@ export class DSPRuntime {
     operation: OperationRecord,
     verification: VerificationResult,
   ): Promise<OperationRecord> {
+    // Structural failure is the more basic problem, so it takes precedence. An
+    // operation that did everything asked of it and still missed the point gets a
+    // status of its own rather than being reported as a success.
     const status =
-      operation.status === 'completed' && verification.status !== 'satisfied'
-        ? 'verification_failed'
-        : operation.status
+      operation.status !== 'completed'
+        ? operation.status
+        : verification.status !== 'satisfied'
+          ? 'verification_failed'
+          : verification.contract !== null && !verification.contract.satisfied
+            ? 'goal_not_satisfied'
+            : operation.status
 
     const updated: OperationRecord = {
       ...operation,

@@ -1,7 +1,7 @@
 {
-  "name": "@dsp/plan-engine",
+  "name": "@dsp/contract-engine",
   "version": "0.1.2",
-  "description": "Deterministic diff, dependency ordering, risk scoring and plan assembly",
+  "description": "Evaluates Desired State Contract predicates: what a document was for, not just what it described",
   "type": "module",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
@@ -19,7 +19,7 @@
     "build": "tsc -b"
   },
   "dependencies": {
-    "@dsp/contract-engine": "workspace:*",
+    "@bufbuild/cel": "^0.6.0",
     "@dsp/protocol": "workspace:*"
   }
 }

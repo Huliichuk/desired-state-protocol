@@ -1,6 +1,7 @@
 import type { DspApiVersion } from '../version.js'
 import type { RiskLevel } from './common.js'
 import type { PolicyEffect } from './policy.js'
+import type { ContractCheck } from './contract.js'
 
 export type ChangeAction = 'create' | 'update' | 'delete' | 'replace' | 'noop' | 'blocked'
 
@@ -104,6 +105,11 @@ export interface DSPPlan {
   changes: PlanChange[]
   approvals: PlanApprovals
   policyEvaluation: PolicyEvaluationResult
+  /**
+   * The client's own declared constraints, evaluated against the desired state.
+   * Null when the document declared none.
+   */
+  contract: ContractCheck | null
   executable: boolean
 }
 
@@ -121,6 +127,7 @@ export interface PlanHashInput {
   changes: PlanChange[]
   approvals: PlanApprovals
   policyEvaluation: PolicyEvaluationResult
+  contract: ContractCheck | null
   executable: boolean
 }
 

@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean && rm -rf packages/*/dist apps/*/dist",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && pnpm typecheck:tests",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
@@ -18,10 +18,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "dev:server": "pnpm --filter @dsp/server dev",
-    "verify": "pnpm build && pnpm lint && pnpm test",
+    "verify": "pnpm build && pnpm typecheck:tests && pnpm lint && pnpm test",
     "docs:build": "node scripts/build-docs.mjs",
     "schemas:generate": "node packages/protocol/dist/scripts/generate-schemas.js",
-    "docs:og": "node scripts/build-og-image.mjs"
+    "docs:og": "node scripts/build-og-image.mjs",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.test.json"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",

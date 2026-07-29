@@ -236,11 +236,13 @@ export function buildProgram(): Command {
           emit(outputOptions(options), operation, () => renderOperation(operation))
 
           if (operation.status === 'completed') return EXIT.ok
-          // `partially_completed` and `verification_failed` both mean the same
-          // thing to a caller: the desired state does not hold.
+          // These all mean the same thing to a caller: what was wanted is not true.
+          // `goal_not_satisfied` is the sharpest case — every change succeeded and
+          // the point was still missed.
           if (
             operation.status === 'verification_failed' ||
-            operation.status === 'partially_completed'
+            operation.status === 'partially_completed' ||
+            operation.status === 'goal_not_satisfied'
           ) {
             return EXIT.notSatisfied
           }

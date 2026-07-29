@@ -56,6 +56,29 @@ eu-central-1 running postgres` is desired state; `createDatabase()` is an operat
 Submitting the same desired state twice is safe, because the second time there is
 nothing left to do.
 
+## What is a Desired State Contract?
+
+A contract is the part of a DSP document that states what the document is _for_: a
+goal in prose, constraints the client declares on itself, and success conditions that
+must hold once the change has been applied. Without one, DSP can only verify that the
+world matches the document, which is a different question from whether the change
+achieved anything.
+
+## Why is matching the document not enough?
+
+Because a document can be satisfied and useless. A document asking for a subscription
+with `active: false` verifies perfectly — the world matches it exactly — and nobody
+can be billed. With a success condition of "an active subscription exists", the same
+change is reported as `goal_not_satisfied`: every step succeeded and the point was
+missed.
+
+## What is the difference between a contract constraint and a policy?
+
+A constraint is declared by the client in its own document and is a self-check: it
+catches the client contradicting itself, and a client that picks weak constraints only
+fools itself. A policy is declared by the operator, cannot be influenced by any
+document, and is the actual control. DSP evaluates both and never confuses them.
+
 ## How does DSP verify that a change actually worked?
 
 After executing a plan, the runtime re-reads the provider's real state and compares
@@ -82,7 +105,7 @@ a reviewer can see what would have been destroyed.
 
 No. DSP 0.1 is pre-1.0 and has not had an external security review, so it should not
 be pointed at production credentials yet. It ships a complete runtime, a reference
-provider and 517 automated tests, which makes it ready to build against and to
+provider and 560 automated tests, which makes it ready to build against and to
 implement — not ready to trust with a live account.
 
 ## What licence is DSP under? Can I use it commercially?

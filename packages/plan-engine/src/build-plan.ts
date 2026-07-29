@@ -11,6 +11,7 @@ import {
   type PlanChange,
   type PlanHashInput,
   type PlanSummary,
+  type ContractCheck,
   type PolicyEvaluationResult,
   type ProtocolLimits,
   type ResourceProjection,
@@ -37,6 +38,12 @@ export interface BuildPlanInput {
   policyBundleHash: string
   /** Injected so the plan engine stays independent of the policy engine. */
   evaluatePolicies: (input: PolicyEvaluationInput) => PolicyEvaluationResult
+  /**
+   * The client's own constraints, already evaluated against the desired state.
+   * Passed in rather than computed here so the plan engine stays independent of the
+   * expression language, and so the result is a plain input to the hash.
+   */
+  contract?: ContractCheck | null
   /**
    * Optional provider hook, applied after the diff and before risk scoring.
    * It may only annotate existing changes: adding, removing or re-typing a
@@ -99,7 +106,11 @@ export async function buildPlan(input: BuildPlanInput): Promise<DSPPlan> {
     required: policyEvaluation.requiredApprovals.length > 0,
     requirements: policyEvaluation.requiredApprovals,
   }
-  const executable = policyEvaluation.allowed
+  const contract = input.contract ?? null
+  // A document whose own declared constraints do not hold is internally
+  // contradictory, so it is not executable. This is the client catching its own
+  // mistake; the operator's control is the policy bundle.
+  const executable = policyEvaluation.allowed && (contract?.satisfied ?? true)
 
   const hashInput: PlanHashInput = {
     apiVersion: DSP_API_VERSION,
@@ -111,6 +122,7 @@ export async function buildPlan(input: BuildPlanInput): Promise<DSPPlan> {
     changes,
     approvals,
     policyEvaluation,
+    contract,
     executable,
   }
   const planHash = hashCanonical(hashInput)
@@ -136,6 +148,7 @@ export async function buildPlan(input: BuildPlanInput): Promise<DSPPlan> {
     changes,
     approvals,
     policyEvaluation,
+    contract,
     executable,
   }
 }
@@ -155,6 +168,7 @@ export function computePlanHash(plan: DSPPlan): string {
     changes: plan.changes,
     approvals: plan.approvals,
     policyEvaluation: plan.policyEvaluation,
+    contract: plan.contract,
     executable: plan.executable,
   }
   return hashCanonical(hashInput)

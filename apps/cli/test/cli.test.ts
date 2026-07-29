@@ -163,6 +163,7 @@ describe('rendering', () => {
       required: true,
       requirements: [{ id: 'apr_1', reason: 'needs a human', minApprovals: 1, risk: 'medium' }],
     },
+    contract: null,
     policyEvaluation: {
       allowed: true,
       decisions: [
@@ -316,6 +317,7 @@ describe('rendering', () => {
         verifiedAt: '2026-07-29T18:00:02.000Z',
         matched: ['mock.database/main.name'],
         unmatched: [{ path: 'mock.subscription/x.plan', reason: 'missing' }],
+        contract: null,
       },
       cancellationRequested: false,
       error: null,
@@ -338,6 +340,7 @@ describe('rendering', () => {
       verifiedAt: '2026-07-29T18:00:02.000Z',
       matched: ['a.b'],
       unmatched: [],
+      contract: null,
     }
     const output = renderVerification(verification)
     expect(output).toContain('satisfied')

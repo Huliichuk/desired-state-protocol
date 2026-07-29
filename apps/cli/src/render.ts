@@ -5,6 +5,7 @@ import {
   type CurrentState,
   type DSPManifest,
   type DSPPlan,
+  type ContractCheck,
   type OperationRecord,
   type ValidationResult,
   type VerificationResult,
@@ -133,6 +134,10 @@ export function renderPlan(plan: DSPPlan): string {
     }
   }
 
+  if (plan.contract !== null) {
+    lines.push('', ...renderContract(plan.contract, 'Contract', 'constraint'))
+  }
+
   lines.push(
     '',
     bold('Summary:'),
@@ -203,6 +208,10 @@ export function renderOperation(operation: OperationRecord, title = 'DSP APPLY')
     )
     for (const mismatch of operation.verification.unmatched.slice(0, 10)) {
       lines.push(`    ${red('✗')} ${cyan(mismatch.path)}: ${mismatch.reason}`)
+    }
+
+    if (operation.verification.contract !== null) {
+      lines.push('', ...renderContract(operation.verification.contract, 'Goal', 'condition'))
     }
   }
 
@@ -290,12 +299,47 @@ export function renderResourceTypes(items: ReadonlyArray<Record<string, unknown>
   return lines.join('\n')
 }
 
+/**
+ * A contract is the difference between "the world matches the document" and "the
+ * change achieved what it was for", so an unmet predicate is printed with its own
+ * message rather than folded into the status line.
+ */
+function renderContract(check: ContractCheck, title: string, noun: string): string[] {
+  const lines = [bold(`${title}:`)]
+
+  if (check.goal !== null) lines.push(`  ${check.goal}`)
+
+  if (check.predicates.length === 0) {
+    if (check.goal === null) lines.push(`  ${dim(`no ${noun}s declared`)}`)
+    return lines
+  }
+
+  lines.push(
+    `  ${check.satisfied ? green('✓ satisfied') : red('✗ not satisfied')} ${dim(
+      `(${check.predicates.length} ${noun}${check.predicates.length === 1 ? '' : 's'})`,
+    )}`,
+  )
+
+  for (const result of check.predicates) {
+    // An unevaluable predicate is neither a pass nor a fail: say so.
+    const glyph = result.error !== null ? yellow('!') : result.satisfied ? green('✓') : red('✗')
+    lines.push(`    ${glyph} ${result.id}`)
+    if (result.error !== null)
+      lines.push(`        ${yellow(`could not evaluate: ${result.error}`)}`)
+    else if (!result.satisfied && result.message !== null)
+      lines.push(`        ${dim(result.message)}`)
+  }
+
+  return lines
+}
+
 function statusColor(status: OperationRecord['status']): string {
   switch (status) {
     case 'completed':
       return green(status)
     case 'failed':
     case 'verification_failed':
+    case 'goal_not_satisfied':
       return red(status)
     case 'partially_completed':
     case 'cancelled':

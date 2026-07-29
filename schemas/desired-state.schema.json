@@ -65,6 +65,72 @@
         }
       }
     },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "goal": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "constraints": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "expression"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "expression": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 2048
+              }
+            }
+          }
+        },
+        "success": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "expression"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "expression": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 2048
+              }
+            }
+          }
+        }
+      }
+    },
     "spec": {
       "type": "object"
     }

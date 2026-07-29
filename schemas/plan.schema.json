@@ -12,6 +12,7 @@
     "changes",
     "approvals",
     "policyEvaluation",
+    "contract",
     "executable"
   ],
   "properties": {
@@ -285,6 +286,70 @@
           }
         }
       }
+    },
+    "contract": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "goal",
+            "predicates",
+            "satisfied"
+          ],
+          "properties": {
+            "goal": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "predicates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "expression",
+                  "satisfied",
+                  "message",
+                  "error"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "expression": {
+                    "type": "string"
+                  },
+                  "satisfied": {
+                    "type": "boolean"
+                  },
+                  "message": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "error": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "satisfied": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
     },
     "executable": {
       "type": "boolean"

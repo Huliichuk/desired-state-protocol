@@ -10,6 +10,7 @@
     { "path": "../secret-store" },
     { "path": "../provider-sdk" },
     { "path": "../policy-engine" },
+    { "path": "../contract-engine" },
     { "path": "../plan-engine" },
     { "path": "../execution-engine" },
     { "path": "../verification-engine" },

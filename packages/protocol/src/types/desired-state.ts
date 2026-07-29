@@ -1,4 +1,5 @@
 import type { DspApiVersion } from '../version.js'
+import type { DesiredStateContract } from './contract.js'
 
 /**
  * A reference to a secret held by the runtime. Desired State documents carry
@@ -26,6 +27,12 @@ export interface DesiredStateDocument<TSpec = unknown> {
   apiVersion: DspApiVersion
   kind: string
   metadata: DesiredStateMetadata
+  /**
+   * What the document is for. Protocol machinery rather than provider data, so it
+   * sits beside `spec` instead of inside it: every provider gets it for free and
+   * none of them has to model it.
+   */
+  contract?: DesiredStateContract
   spec: TSpec
 }
 

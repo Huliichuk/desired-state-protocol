@@ -25,5 +25,8 @@
     "@dsp/core": "workspace:*",
     "@dsp/protocol": "workspace:*",
     "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "fastify": "^5.10.0"
   }
 }
