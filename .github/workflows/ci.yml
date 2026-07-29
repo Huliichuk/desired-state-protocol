@@ -93,37 +93,6 @@ jobs:
           $DSP apply "$PLAN" --confirm
           $DSP audit verify
 
-  docker:
-    name: docker image
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build the image
-        run: docker build -t dsp-runtime:ci .
-
-      - name: Run it and exercise the lifecycle inside the container
-        run: |
-          docker run -d --name dsp -p 4040:4040 -e DSP_AUTH_TOKEN=ci-token dsp-runtime:ci
-          for _ in $(seq 1 60); do curl -sf localhost:4040/health >/dev/null && break; sleep 0.5; done
-
-          curl -sf localhost:4040/health
-          curl -sf localhost:4040/.well-known/dsp
-
-          DOC='{"desiredState":{"apiVersion":"dsp.dev/v1alpha1","kind":"MockWorkspace",
-                "metadata":{"name":"ci"},"spec":{"databases":[{"name":"main",
-                "engine":"postgres","region":"eu"}]}}}'
-          PLAN=$(curl -sf -X POST -H "Authorization: Bearer ci-token" \
-            -H "Content-Type: application/json" -d "$DOC" \
-            localhost:4040/v1/plans | node -e \
-            "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).metadata.id))")
-
-          curl -sf -X POST -H "Authorization: Bearer ci-token" \
-            -H "Idempotency-Key: ci-1" \
-            "localhost:4040/v1/plans/$PLAN/apply" | tee /dev/stderr | grep -q '"status":"completed"'
-
-          docker rm -f dsp
-
   versioning:
     name: versioning discipline
     # Pull requests only: this checks what a change declares about itself, which

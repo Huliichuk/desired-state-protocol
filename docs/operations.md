@@ -213,25 +213,19 @@ pipeline can branch on them without parsing output.
 for both `partially_completed` and `verification_failed` — in both cases the desired
 state is not true.
 
-## Docker
+## Running it as a service
+
+The runtime is a plain Node process. It needs Node 22 or newer, a writable directory
+for `DSP_DATABASE`, a supervisor that restarts it, and TLS in front of it — DSP 0.1
+serves plain HTTP.
 
 ```bash
-export DSP_AUTH_TOKEN=$(openssl rand -base64 32)
-docker compose up --build
+DSP_AUTH_TOKEN=$(openssl rand -base64 32) node apps/server/dist/main.js
 ```
 
-```bash
-curl -s localhost:4040/health
-```
-
-The image runs as the `node` user, keeps SQLite files in the `/data` volume, and has
-a `HEALTHCHECK` against `/health`. `DSP_AUTH_TOKEN` is required by the compose file —
-a container whose token is printed to its own stdout is not usable.
-
-To mount a reviewed policy bundle, uncomment both the volume and `DSP_POLICY_DIR` in
-[`docker-compose.yml`](../docker-compose.yml).
-
-The image ships plain HTTP. Put a TLS terminator in front of it before exposing it.
+Bind to `127.0.0.1` and reverse-proxy to it rather than exposing the runtime
+directly. [deploy/README.md](../deploy/README.md) has a systemd unit that does this,
+including which single path has to stay writable.
 
 ## Runbook
 

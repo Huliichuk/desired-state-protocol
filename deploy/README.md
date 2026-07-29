@@ -1,14 +1,13 @@
 # Deploying DSP
 
-Three things can be deployed, and they are not equally advisable.
+Two things can be deployed, and they have opposite requirements.
 
-| What                | Where                  | Status                                                                                                    |
-| ------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| Documentation site  | GitHub Pages           | live at [huliichuk.github.io/desired-state-protocol](https://huliichuk.github.io/desired-state-protocol/) |
-| Local runtime       | your machine or Docker | one command, see below                                                                                    |
-| Public demo runtime | Fly.io                 | config ready, needs an account                                                                            |
+| What               | Where                                      | Status                                                                                                    |
+| ------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Documentation site | GitHub Pages                               | live at [huliichuk.github.io/desired-state-protocol](https://huliichuk.github.io/desired-state-protocol/) |
+| Runtime            | a host that runs a long-lived Node process | run it yourself, see below                                                                                |
 
-## Why not a serverless platform
+## Why the runtime cannot go to a serverless platform
 
 DSP is a long-lived stateful process. Plans, approvals, operations, idempotency
 keys and the audit chain live in SQLite on disk, and every one of them has to
@@ -24,76 +23,98 @@ invocations, so all three guarantees would quietly stop holding. That rules out
 Vercel Functions, Cloudflare Workers and Lambda for the runtime itself, and it is
 why the documentation site — which _is_ static — is the part that goes to a CDN.
 
-A hosted DSP runtime needs: a long-running process, a persistent volume, and TLS
-in front of it.
+## Running it
 
-## Running it locally
-
-Nothing to deploy. Docker:
-
-```bash
-export DSP_AUTH_TOKEN=$(openssl rand -base64 32)
-docker compose up --build
-```
-
-Or straight from source:
+Requires **Node.js 22 or newer**. The runtime uses the built-in `node:sqlite`, so
+there is nothing to compile and no native module to install.
 
 ```bash
 pnpm install && pnpm build
+```
+
+```bash
 DSP_POLICY_DIR=examples/mock-workspace/policies node apps/server/dist/main.js
 ```
 
-With `DSP_AUTH_TOKEN` unset, the server generates a token for that process and
-prints it. See [docs/operations.md](../docs/operations.md) for the full
-environment reference.
-
-## A public demo runtime on Fly.io
-
-[`fly/fly.toml`](fly/fly.toml) is ready. Four commands:
+With `DSP_AUTH_TOKEN` unset the server generates a token for that process and prints
+it, which is convenient locally and useless anywhere else — set it explicitly
+wherever the process is not a terminal you are watching:
 
 ```bash
-brew install flyctl && fly auth login
+export DSP_AUTH_TOKEN=$(openssl rand -base64 32)
 ```
 
-```bash
-fly launch --config deploy/fly/fly.toml --copy-config --no-deploy
+See [docs/operations.md](../docs/operations.md) for the full environment reference.
+
+## Hosting it somewhere
+
+A hosted DSP runtime needs four things:
+
+1. **Node.js 22 or newer.**
+2. **A long-running process**, restarted on failure.
+3. **A writable directory that survives a restart**, for `DSP_DATABASE`. Losing it
+   loses the audit trail.
+4. **TLS in front of it.** DSP 0.1 serves plain HTTP.
+
+Anything that provides those works: a VM with systemd, a managed Node host that
+builds from source, or your existing process supervisor.
+
+A systemd unit, as a concrete example:
+
+```ini
+[Unit]
+Description=DSP runtime
+After=network-online.target
+
+[Service]
+Type=simple
+User=dsp
+WorkingDirectory=/opt/dsp
+ExecStart=/usr/bin/node apps/server/dist/main.js
+Restart=on-failure
+RestartSec=5
+
+Environment=DSP_HOST=127.0.0.1
+Environment=DSP_PORT=4040
+Environment=DSP_ENVIRONMENT=production
+Environment=DSP_DATABASE=/var/lib/dsp/runtime.sqlite
+Environment=DSP_POLICY_DIR=/etc/dsp/policies
+# Never inline the token. Point at a file only this user can read.
+EnvironmentFile=/etc/dsp/secrets.env
+
+# The runtime needs exactly one writable path.
+ReadWritePaths=/var/lib/dsp
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-```bash
-fly secrets set DSP_AUTH_TOKEN="$(openssl rand -base64 32)" --config deploy/fly/fly.toml
-```
-
-```bash
-fly deploy --config deploy/fly/fly.toml
-```
-
-Fly terminates TLS for you, `force_https` is on, and the `[[mounts]]` volume keeps
-the audit chain across restarts. `min_machines_running = 0` lets the demo sleep
-when nobody is using it.
+Bind to `127.0.0.1` and put a reverse proxy in front of it for TLS, rather than
+exposing the runtime directly.
 
 ### Before you expose one
 
 [SECURITY.md](../SECURITY.md) says not to point a DSP runtime at production
-credentials, and a public demo is exactly where that rule gets broken by accident.
-The config is written so it cannot be:
+credentials, and a publicly reachable runtime is where that rule gets broken by
+accident. Before it is reachable by anyone but you:
 
-- **Only the mock provider is compiled in.** The "external system" this runtime can
-  change is a SQLite file inside its own container. There is no real service
-  reachable from it and no real credential to leak.
-- **`DSP_ALLOW_DESTRUCTIVE=false`.** Deletions and replacements stay refused. Do not
-  turn this on for something public.
-- **`DSP_ENVIRONMENT=demo`.** The environment feeds the risk score, so demo plans
-  stay out of the production risk band — and it is honest about what the thing is.
-- **A real token, set as a Fly secret.** Not baked into the image, not committed.
+- **Set `DSP_AUTH_TOKEN` to a high-entropy value.** A generated per-process token
+  printed to stdout is not a deployment credential.
+- **Leave `DSP_ALLOW_DESTRUCTIVE` unset.** Deletions and replacements stay refused.
+- **Point `DSP_POLICY_DIR` at a reviewed bundle.** The built-in default blocks
+  destructive changes and requires approval for high risk, and nothing more.
+- **Give provider credentials the minimum scope** the declared resource types need.
+- **Name the environment honestly.** `DSP_ENVIRONMENT` feeds the risk score, so
+  calling production `production` is what makes production plans score as risky.
 
-If you publish the demo token so people can try it without asking you, understand
-what you are publishing: anyone can create and apply plans against that container's
-own database. That is acceptable for a mock provider and unacceptable the moment a
-real provider is added.
-
-Once a provider that talks to a real service exists, a public demo needs a
-different shape: per-visitor tokens, that vendor's sandbox mode only, and rate
-limiting. None of that is implemented in 0.1.
+Only the reference provider ships in 0.1, and the "external system" it can change is
+a SQLite file beside the runtime. The moment a provider that talks to a real service
+is added, a publicly reachable runtime needs per-caller tokens, that vendor's sandbox
+mode, and rate limiting — none of which exists yet.
 
 ## Checking a deployment
 
@@ -129,4 +150,11 @@ Build it locally:
 
 ```bash
 pnpm docs:build && npx http-server site
+```
+
+The social preview card is regenerated separately, because the site builds on a CI
+runner with no browser:
+
+```bash
+pnpm docs:og
 ```

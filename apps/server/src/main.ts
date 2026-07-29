@@ -51,7 +51,7 @@ try {
 } catch (error) {
   // Startup diagnostics go to an operator's stderr, not to an untrusted client, so
   // the real cause is printed. Generic messages belong in HTTP responses; a
-  // container that will not start has to be debuggable.
+  // process that will not start has to be debuggable.
   process.stderr.write(`DSP server failed to start.\n\n`)
 
   if (DSPError.isDSPError(error)) {
