@@ -29,6 +29,7 @@ import {
   type MockWorkspaceSpec,
   type MockWorkspaceState,
 } from './types.js'
+import { MOCK_PROVIDER_VERSION } from './version.js'
 
 export interface MockProviderOptions {
   backend: MockBackend
@@ -41,7 +42,7 @@ export interface MockProviderOptions {
  */
 export class MockProvider implements DSPProvider<MockWorkspaceSpec, MockWorkspaceState> {
   readonly name = MOCK_PROVIDER_NAME
-  readonly version = '0.1.0'
+  readonly version = MOCK_PROVIDER_VERSION
   readonly kinds: KindDefinition[] = [mockKindDefinition]
   readonly resourceTypes: ResourceTypeDefinition[] = mockResourceTypes
 

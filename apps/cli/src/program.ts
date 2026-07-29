@@ -14,6 +14,7 @@ import {
   renderVerification,
 } from './render.js'
 import { bold, dim, green, red, setColorEnabled, yellow } from './style.js'
+import { CLI_VERSION } from './version.js'
 
 const DEFAULT_SERVER = process.env['DSP_SERVER'] ?? 'http://127.0.0.1:4040'
 
@@ -60,7 +61,7 @@ export function buildProgram(): Command {
   program
     .name('dsp')
     .description('Desired State Protocol command line client')
-    .version('0.1.0')
+    .version(CLI_VERSION)
     .option('-s, --server <url>', 'DSP server base URL', DEFAULT_SERVER)
     .option('-t, --token <token>', 'bearer token (or DSP_TOKEN)')
     .option('--json', 'emit machine-readable JSON')
