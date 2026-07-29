@@ -1,5 +1,19 @@
 # @dsp/server
 
+## 0.2.0
+
+### Patch Changes
+
+- Updated dependencies [abeead5]
+- Updated dependencies [abeead5]
+  - @dsp/protocol@0.2.0
+  - @dsp/secret-store@0.2.0
+  - @dsp/audit@0.2.0
+  - @dsp/core@0.2.0
+  - @dsp/policy-engine@0.2.0
+  - @dsp/provider-mock@0.2.0
+  - @dsp/provider-sdk@0.2.0
+
 ## 0.1.2
 
 ### Patch Changes
