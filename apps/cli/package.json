@@ -1,6 +1,6 @@
 {
   "name": "@dsp/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Command line client for the Desired State Protocol",
   "type": "module",
   "license": "Apache-2.0",

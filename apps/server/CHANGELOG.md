@@ -1,5 +1,19 @@
 # @dsp/server
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [a73eded]
+- Updated dependencies [6b01211]
+  - @dsp/provider-mock@0.1.2
+  - @dsp/protocol@0.1.2
+  - @dsp/audit@0.1.2
+  - @dsp/core@0.1.2
+  - @dsp/policy-engine@0.1.2
+  - @dsp/provider-sdk@0.1.2
+  - @dsp/secret-store@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
