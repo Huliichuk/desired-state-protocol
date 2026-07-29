@@ -75,7 +75,7 @@ jobs:
           node scripts/release-notes.mjs "$VERSION" > /tmp/notes.md
           cat /tmp/notes.md
 
-          if git rev-parse "$tag" >/dev/null 2>&1; then
+          if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
             # Resume after a run that created the tag but not the release.
             gh release create "$tag" \
               --repo "$GITHUB_REPOSITORY" \
