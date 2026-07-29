@@ -20,3 +20,8 @@ examples/**/*.md
 .vscode
 .idea
 .DS_Store
+
+# Site build artifacts, not needed in the runtime image
+assets/
+site/
+scripts/

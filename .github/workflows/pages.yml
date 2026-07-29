@@ -11,7 +11,9 @@ on:
       - 'SECURITY.md'
       - 'CONTRIBUTING.md'
       - 'docs/**'
+      - 'assets/**'
       - 'scripts/build-docs.mjs'
+      - 'CHANGELOG.md'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -29,6 +31,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The build reads git history for each page's real last-modified date.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 

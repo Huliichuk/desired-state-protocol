@@ -5,6 +5,12 @@
 [![Protocol](https://img.shields.io/badge/protocol-0.1.0-informational.svg)](SPEC.md)
 [![Docs](https://img.shields.io/badge/docs-huliichuk.github.io-brightgreen.svg)](https://huliichuk.github.io/desired-state-protocol/)
 
+**DSP is an open protocol that lets an AI agent change the state of an external
+system — a SaaS account, a database, a piece of infrastructure — by describing the
+intended end state instead of calling write operations one at a time.** The runtime
+computes the difference, scores the risk, checks it against policy, and produces an
+immutable plan that a human can review before anything happens.
+
 ```
 DSP is an open protocol for declarative, verifiable execution by AI agents.
 
@@ -433,6 +439,7 @@ if the published schemas drift from their TypeScript source of truth.
 | [docs/provider-authoring.md](docs/provider-authoring.md) | writing a provider                      |
 | [docs/interoperability.md](docs/interoperability.md)     | APIs, MCP, CI/CD                        |
 | [docs/operations.md](docs/operations.md)                 | running and operating a runtime         |
+| [docs/faq.md](docs/faq.md)                               | frequently asked questions              |
 | [deploy/README.md](deploy/README.md)                     | deploying the docs site and a runtime   |
 | [CHANGELOG.md](CHANGELOG.md)                             | releases, and the two versions          |
 
