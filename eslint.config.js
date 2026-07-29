@@ -30,4 +30,17 @@ export default tseslint.config(
     files: ['**/test/**/*.ts', '**/*.test.ts'],
     rules: { 'no-console': 'off' },
   },
+  {
+    // Build scripts are plain Node ESM rather than TypeScript, so `no-undef` has
+    // to be told which Node globals exist.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        Buffer: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
 )

@@ -9,6 +9,7 @@ coverage/
 # byte for byte, so Prettier must not reformat them.
 schemas/
 
-# Third-party text, kept verbatim.
+# Plain-text legal files with no parser.
 LICENSE
+NOTICE
 .changeset/README.md

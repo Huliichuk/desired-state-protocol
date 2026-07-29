@@ -12,3 +12,6 @@ coverage/
 .DS_Store
 .vscode/
 .idea/
+
+# Generated documentation site
+site/
