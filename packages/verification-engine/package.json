@@ -1,6 +1,6 @@
 {
   "name": "@dsp/verification-engine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Compares the desired state with the state actually observed after apply",
   "type": "module",
   "license": "Apache-2.0",

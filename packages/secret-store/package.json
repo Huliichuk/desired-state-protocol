@@ -1,6 +1,6 @@
 {
   "name": "@dsp/secret-store",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Secret abstraction for the DSP runtime: env and encrypted-file stores",
   "type": "module",
   "license": "Apache-2.0",
