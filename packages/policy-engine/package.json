@@ -1,6 +1,6 @@
 {
   "name": "@dsp/policy-engine",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Declarative, LLM-free policy evaluation for DSP plans",
   "type": "module",
   "license": "Apache-2.0",
