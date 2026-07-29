@@ -123,3 +123,60 @@ jobs:
             "localhost:4040/v1/plans/$PLAN/apply" | tee /dev/stderr | grep -q '"status":"completed"'
 
           docker rm -f dsp
+
+  versioning:
+    name: versioning discipline
+    # Pull requests only: this checks what a change declares about itself, which
+    # is meaningless once the change is already on main.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Fetch the base branch
+        run: git fetch --no-tags origin "${{ github.base_ref }}:${{ github.base_ref }}"
+
+      # A change to a released package without a changeset means the release notes
+      # will not mention it and no version will move. CONTRIBUTING.md promises a
+      # changeset; this is what keeps the promise.
+      - name: A changed package declares a changeset
+        run: pnpm changeset status --since="${{ github.base_ref }}"
+
+      # The protocol version and the package version move independently, but a
+      # protocol version bump without a specification change is always a mistake:
+      # clients read that number to decide whether they can talk to the runtime.
+      - name: A protocol version bump comes with the specification
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          current=$(grep -oE "DSP_PROTOCOL_VERSION = '[^']+'" packages/protocol/src/version.ts)
+          previous=$(git show "$BASE:packages/protocol/src/version.ts" \
+            | grep -oE "DSP_PROTOCOL_VERSION = '[^']+'" || echo "")
+
+          if [ "$current" = "$previous" ]; then
+            echo "Protocol version unchanged: $current"
+            exit 0
+          fi
+
+          echo "Protocol version changed: ${previous:-none} -> $current"
+          changed=$(git diff --name-only "$BASE"...HEAD)
+
+          for required in SPEC.md schemas; do
+            if ! echo "$changed" | grep -q "^$required"; then
+              echo "::error::The protocol version changed but $required did not."
+              echo "A protocol change must update SPEC.md and the published schemas together."
+              exit 1
+            fi
+          done
+          echo "SPEC.md and schemas/ were updated alongside the protocol version."

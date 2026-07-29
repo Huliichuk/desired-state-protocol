@@ -434,6 +434,7 @@ if the published schemas drift from their TypeScript source of truth.
 | [docs/interoperability.md](docs/interoperability.md)     | APIs, MCP, CI/CD                        |
 | [docs/operations.md](docs/operations.md)                 | running and operating a runtime         |
 | [deploy/README.md](deploy/README.md)                     | deploying the docs site and a runtime   |
+| [CHANGELOG.md](CHANGELOG.md)                             | releases, and the two versions          |
 
 ## License
 

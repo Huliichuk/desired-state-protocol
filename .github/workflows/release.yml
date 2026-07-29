@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: version and release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Changesets compares against history to work out what changed.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Nothing gets versioned unless it builds and its tests pass.
+      - run: pnpm build
+      - run: pnpm test
+
+      # With pending changesets this opens or updates a "Version packages" pull
+      # request that bumps every version and writes the changelogs. With none
+      # pending it does nothing, and the release step below takes over.
+      - id: changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset version
+          commit: 'Version packages'
+          title: 'Version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Every @dsp/* package moves together (see .changeset/config.json), so one
+      # version describes the whole repository and one tag is enough.
+      - name: Read the current version
+        id: version
+        run: echo "value=$(node -p "require('./packages/protocol/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Tag and publish the GitHub release
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          # Idempotent: an ordinary push to main with no pending changesets and no
+          # version change finds the tag already there and stops.
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION already released"
+            exit 0
+          fi
+
+          node scripts/release-notes.mjs "$VERSION" > /tmp/notes.md
+          cat /tmp/notes.md
+
+          git tag -a "v$VERSION" -m "DSP v$VERSION"
+          git push origin "v$VERSION"
+
+          gh release create "v$VERSION" \
+            --title "DSP v$VERSION" \
+            --notes-file /tmp/notes.md
+
+      # Publishing to npm is deliberately off while the protocol is pre-1.0. To
+      # turn it on: add an NPM_TOKEN secret and give the changesets step above
+      # `publish: pnpm changeset publish`.

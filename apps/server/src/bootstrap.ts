@@ -6,6 +6,7 @@ import { defaultPolicyBundle, loadPolicyBundleFromDirectory } from '@dsp/policy-
 import { MockBackend, MockProvider } from '@dsp/provider-mock'
 import { createSecretStore } from '@dsp/secret-store'
 import type { ServerEnv } from './env.js'
+import { SERVER_NAME, SERVER_VERSION } from './version.js'
 
 export interface Bootstrapped {
   runtime: DSPRuntime
@@ -40,7 +41,7 @@ export async function bootstrap(env: ServerEnv): Promise<Bootstrapped> {
       tenant: env.tenant,
       limits: env.limits,
       allowDestructive: env.allowDestructive,
-      server: { name: 'DSP Reference Runtime', version: '0.1.0' },
+      server: { name: SERVER_NAME, version: SERVER_VERSION },
     },
   })
 

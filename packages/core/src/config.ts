@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module'
 import { DEFAULT_LIMITS, type ProtocolLimits } from '@dsp/protocol'
 import { DEFAULT_RETRY, type RetryOptions } from '@dsp/execution-engine'
 
@@ -18,9 +19,16 @@ export interface RuntimeConfig {
   allowDestructive: boolean
 }
 
+/**
+ * Read from this package rather than written down a second time: a literal here
+ * would keep claiming the version it was authored at once releases start moving.
+ */
+const require = createRequire(import.meta.url)
+const pkg = require('../package.json') as { version: string }
+
 export const DEFAULT_SERVER_INFO: ServerInfo = {
   name: 'DSP Reference Runtime',
-  version: '0.1.0',
+  version: pkg.version,
 }
 
 export function createRuntimeConfig(overrides: Partial<RuntimeConfig> = {}): RuntimeConfig {

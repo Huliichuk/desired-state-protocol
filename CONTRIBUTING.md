@@ -126,7 +126,7 @@ forgotten regeneration will not reach `main`.
 If the change alters what a plan hash covers, say so explicitly in the PR
 description: it invalidates every stored plan and approval.
 
-## Commits and changesets
+## Commits
 
 Commit messages describe the change and its reason, imperatively:
 
@@ -137,14 +137,82 @@ Approvals are bound to the plan hash, so extending the window let an old
 approval authorize a change indefinitely.
 ```
 
-Any change to a published package needs a changeset:
+## Versioning and releases
+
+All `@dsp/*` packages are version-locked and move together, so one version
+describes the whole repository and one tag marks each release.
+
+### Declare your change
+
+Any change to a released package needs a changeset:
 
 ```bash
 pnpm changeset
 ```
 
-Pre-1.0, a breaking protocol change is a minor bump and must be described as
-breaking in the changeset.
+Pick the packages you touched, pick a bump, and write the summary as a sentence
+someone reading the release notes will understand. It ends up in the release
+verbatim, so `"fix bug"` is not enough — say what was wrong.
+
+Pre-1.0, a breaking change is a **minor** bump and the summary must say it is
+breaking.
+
+CI fails a pull request that changes a released package without a changeset:
+
+```bash
+pnpm changeset status --since=main
+```
+
+Run that locally to see what CI will say. A change that genuinely needs no version
+— documentation, tests, CI — can record an empty changeset:
+
+```bash
+pnpm changeset --empty
+```
+
+### What happens after merge
+
+```
+your PR merges to main
+        │
+        ▼
+"Version packages" PR opens or updates      ← bumps every version,
+        │                                     writes the changelogs
+        ▼
+you merge it
+        │
+        ▼
+v<version> tag + GitHub release             ← notes assembled from the changesets
+```
+
+Nothing is versioned unless it builds and its tests pass: the release workflow runs
+`pnpm build` and `pnpm test` before it touches a version.
+
+Release notes are assembled by [`scripts/release-notes.mjs`](scripts/release-notes.mjs),
+which collapses the eleven per-package changelogs into one document — each entry
+once, annotated with the packages it touched.
+
+Publishing to npm is deliberately off while the protocol is pre-1.0. Turning it on
+is an `NPM_TOKEN` secret and one line in
+[`.github/workflows/release.yml`](.github/workflows/release.yml).
+
+### The protocol version is separate
+
+| Version                | Changes when                              |
+| ---------------------- | ----------------------------------------- |
+| Package version        | any release: a fix, a feature, a refactor |
+| `DSP_PROTOCOL_VERSION` | only when the wire format changes         |
+
+Clients read `protocolVersion` from the manifest to decide whether they can talk to
+a runtime, so bumping it for an internal fix would tell every client to re-check
+compatibility for nothing.
+
+Never write a version down twice. `server.version` in the manifest is read from
+`package.json` at runtime, and a test asserts it — a literal there would keep
+reporting the version it was authored at.
+
+CI refuses a pull request that changes `DSP_PROTOCOL_VERSION` without also changing
+`SPEC.md` and `schemas/`.
 
 ## Pull requests
 

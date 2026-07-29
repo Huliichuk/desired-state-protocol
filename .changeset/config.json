@@ -17,9 +17,10 @@
       "@dsp/provider-sdk",
       "@dsp/provider-mock",
       "@dsp/core",
-      "@dsp/cli"
+      "@dsp/cli",
+      "@dsp/server"
     ]
   ],
   "linked": [],
-  "ignore": ["@dsp/server"]
+  "ignore": []
 }
