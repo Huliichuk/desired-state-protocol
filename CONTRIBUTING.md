@@ -189,7 +189,7 @@ Nothing is versioned unless it builds and its tests pass: the release workflow r
 `pnpm build` and `pnpm test` before it touches a version.
 
 Release notes are assembled by [`scripts/release-notes.mjs`](scripts/release-notes.mjs),
-which collapses the eleven per-package changelogs into one document — each entry
+which collapses the twelve per-package changelogs into one document — each entry
 once, annotated with the packages it touched.
 
 Publishing to npm is deliberately off while the protocol is pre-1.0. Turning it on

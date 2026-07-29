@@ -2,7 +2,7 @@
  * Builds the release notes for one version.
  *
  * Changesets writes a CHANGELOG.md per package. Because every @dsp/* package is
- * version-locked, the same release shows up in eleven files, and reading eleven
+ * version-locked, the same release shows up in twelve files, and reading twelve
  * changelogs is nobody's idea of release notes. This collapses them into one
  * document: each distinct entry once, with the packages it touched.
  *
