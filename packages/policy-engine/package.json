@@ -1,0 +1,25 @@
+{
+  "name": "@dsp/policy-engine",
+  "version": "0.1.0",
+  "description": "Declarative, LLM-free policy evaluation for DSP plans",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@dsp/protocol": "workspace:*",
+    "yaml": "^2.8.1"
+  }
+}

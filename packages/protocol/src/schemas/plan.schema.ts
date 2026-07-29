@@ -1,0 +1,173 @@
+import type { JsonSchema } from '../types/common.js'
+import { DSP_API_VERSION } from '../version.js'
+
+const riskLevel = { enum: ['low', 'medium', 'high', 'critical'] }
+
+const approvalRequirement: JsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'reason', 'minApprovals', 'risk'],
+  properties: {
+    id: { type: 'string' },
+    reason: { type: 'string' },
+    policyId: { type: 'string' },
+    ruleId: { type: 'string' },
+    minApprovals: { type: 'integer', minimum: 1 },
+    risk: riskLevel,
+  },
+}
+
+export const planSchema: JsonSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://dsp.dev/schemas/v1alpha1/plan.schema.json',
+  title: 'DSP Plan',
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'apiVersion',
+    'kind',
+    'metadata',
+    'summary',
+    'changes',
+    'approvals',
+    'policyEvaluation',
+    'executable',
+  ],
+  properties: {
+    apiVersion: { const: DSP_API_VERSION },
+    kind: { const: 'Plan' },
+    metadata: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'id',
+        'createdAt',
+        'expiresAt',
+        'desiredStateHash',
+        'currentStateHash',
+        'policyBundleHash',
+        'planHash',
+        'kind',
+        'namespace',
+        'resourceName',
+        'provider',
+        'currentRevision',
+      ],
+      properties: {
+        id: { type: 'string', pattern: '^plan_[0-9a-f]{24}$' },
+        createdAt: { type: 'string', format: 'date-time' },
+        expiresAt: { type: 'string', format: 'date-time' },
+        desiredStateHash: { $ref: '#/$defs/hash' },
+        currentStateHash: { $ref: '#/$defs/hash' },
+        policyBundleHash: { $ref: '#/$defs/hash' },
+        planHash: { $ref: '#/$defs/hash' },
+        kind: { type: 'string' },
+        namespace: { type: 'string' },
+        resourceName: { type: 'string' },
+        provider: { type: 'string' },
+        currentRevision: { type: ['string', 'null'] },
+      },
+    },
+    summary: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['create', 'update', 'delete', 'replace', 'noop', 'blocked', 'risk', 'riskScore'],
+      properties: {
+        create: { type: 'integer', minimum: 0 },
+        update: { type: 'integer', minimum: 0 },
+        delete: { type: 'integer', minimum: 0 },
+        replace: { type: 'integer', minimum: 0 },
+        noop: { type: 'integer', minimum: 0 },
+        blocked: { type: 'integer', minimum: 0 },
+        risk: riskLevel,
+        riskScore: { type: 'integer', minimum: 0, maximum: 100 },
+      },
+    },
+    changes: {
+      type: 'array',
+      items: { $ref: '#/$defs/change' },
+    },
+    approvals: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['required', 'requirements'],
+      properties: {
+        required: { type: 'boolean' },
+        requirements: { type: 'array', items: approvalRequirement },
+      },
+    },
+    policyEvaluation: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['allowed', 'decisions', 'requiredApprovals'],
+      properties: {
+        allowed: { type: 'boolean' },
+        decisions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['policyId', 'ruleId', 'effect', 'changeIds', 'message'],
+            properties: {
+              policyId: { type: 'string' },
+              ruleId: { type: 'string' },
+              effect: { enum: ['allow', 'deny', 'warn', 'requireApproval'] },
+              changeIds: { type: 'array', items: { type: 'string' } },
+              message: { type: 'string' },
+            },
+          },
+        },
+        requiredApprovals: { type: 'array', items: approvalRequirement },
+      },
+    },
+    executable: { type: 'boolean' },
+  },
+  $defs: {
+    hash: { type: 'string', pattern: '^sha256:[0-9a-f]{64}$' },
+    change: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'id',
+        'resourceType',
+        'resourceKey',
+        'action',
+        'fields',
+        'reason',
+        'reversible',
+        'destructive',
+        'dependencies',
+        'estimatedRisk',
+      ],
+      properties: {
+        id: { type: 'string' },
+        resourceType: { type: 'string' },
+        resourceKey: { type: 'string' },
+        action: { enum: ['create', 'update', 'delete', 'replace', 'noop', 'blocked'] },
+        path: { type: 'string' },
+        before: {},
+        after: {},
+        fields: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['path', 'before', 'after', 'immutable'],
+            properties: {
+              path: { type: 'string' },
+              before: {},
+              after: {},
+              immutable: { type: 'boolean' },
+            },
+          },
+        },
+        reason: { type: 'string' },
+        reversible: { type: 'boolean' },
+        destructive: { type: 'boolean' },
+        dependencies: { type: 'array', items: { type: 'string' } },
+        estimatedRisk: riskLevel,
+        blockedBy: { type: 'string' },
+      },
+    },
+  },
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@dsp/execution-engine",
+  "version": "0.1.0",
+  "description": "Executes an immutable DSP plan with retries, timeouts and cancellation",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@dsp/protocol": "workspace:*",
+    "@dsp/provider-sdk": "workspace:*"
+  }
+}

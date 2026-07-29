@@ -1,0 +1,17 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/protocol" },
+    { "path": "./packages/secret-store" },
+    { "path": "./packages/provider-sdk" },
+    { "path": "./packages/policy-engine" },
+    { "path": "./packages/plan-engine" },
+    { "path": "./packages/execution-engine" },
+    { "path": "./packages/verification-engine" },
+    { "path": "./packages/audit" },
+    { "path": "./packages/provider-mock" },
+    { "path": "./packages/core" },
+    { "path": "./apps/server" },
+    { "path": "./apps/cli" }
+  ]
+}

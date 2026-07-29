@@ -1,0 +1,36 @@
+{
+  "name": "@dsp/server",
+  "version": "0.1.0",
+  "description": "Local DSP runtime served over HTTP",
+  "type": "module",
+  "license": "Apache-2.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "dsp-server": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/main.js",
+    "dev": "node --watch dist/main.js"
+  },
+  "dependencies": {
+    "@dsp/audit": "workspace:*",
+    "@dsp/core": "workspace:*",
+    "@dsp/policy-engine": "workspace:*",
+    "@dsp/protocol": "workspace:*",
+    "@dsp/provider-mock": "workspace:*",
+    "@dsp/provider-sdk": "workspace:*",
+    "@dsp/secret-store": "workspace:*",
+    "fastify": "^5.10.0",
+    "zod": "^4.4.3",
+    "pino-pretty": "^13.1.3"
+  }
+}

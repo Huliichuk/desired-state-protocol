@@ -1,0 +1,28 @@
+# Demonstrates a refusal. Once `dsp-demo` exists with a postgres database and a
+# EUR subscription, this document asks to change both immutable fields.
+#
+# Expected: `dsp validate` fails with IMMUTABLE_FIELD_CHANGED, and `dsp plan`
+# produces `blocked` changes instead of silently destroying and recreating.
+apiVersion: dsp.dev/v1alpha1
+kind: MockWorkspace
+metadata:
+  name: dsp-demo
+  namespace: default
+spec:
+  databases:
+    - name: main
+      engine: mysql # was postgres — immutable
+      region: eu-central-1
+      sizeGb: 20
+
+  users:
+    - email: founder@example.com
+      role: admin
+      displayName: Founder
+
+  subscriptions:
+    - user: founder@example.com
+      plan: pro
+      amountCents: 2900
+      currency: usd # was eur — immutable
+      active: true

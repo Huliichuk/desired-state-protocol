@@ -1,0 +1,64 @@
+# A policy bundle you can point a server at:
+#   DSP_POLICY_DIR=examples/mock-workspace/policies pnpm --filter @dsp/server start
+#
+# Policies are evaluated by code, never by a model. The bundle is hashed into
+# every plan, so a plan can never be applied under different rules than the
+# ones it was reviewed under.
+apiVersion: dsp.dev/v1alpha1
+kind: Policy
+metadata:
+  name: production-safety
+  description: Guardrails for the demo workspace
+spec:
+  rules:
+    - id: block-delete
+      description: Deletions are never executed by this runtime
+      when:
+        action: delete
+      effect: deny
+      message: Destructive operations are disabled
+
+    - id: block-replace
+      when:
+        action: replace
+      effect: deny
+      message: Replacing a resource destroys existing state
+
+    - id: require-approval-for-high-risk
+      when:
+        riskIn:
+          - high
+          - critical
+      effect: requireApproval
+      message: High risk changes require approval before apply
+      minApprovals: 1
+
+    - id: require-approval-for-permission-changes
+      description: Anything touching a workspace member needs a human
+      when:
+        resourceType: mock.user
+        action:
+          - create
+          - update
+      effect: requireApproval
+      message: Membership and role changes require approval
+      minApprovals: 1
+
+    - id: limit-created-subscriptions
+      description: A single apply must not enrol an entire customer base
+      when:
+        action: create
+        resourceType: mock.subscription
+      constraints:
+        maxChanges: 10
+      effect: deny
+      message: Too many subscriptions created in one plan
+
+    - id: protect-billing-currency
+      when:
+        resourceType: mock.subscription
+        pathPrefix:
+          - currency
+      effect: requireApproval
+      message: Changing billing currency requires approval
+      minApprovals: 1

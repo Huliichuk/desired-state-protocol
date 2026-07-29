@@ -1,0 +1,140 @@
+import type { JsonSchema } from '../types/common.js'
+
+export const resultSchema: JsonSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://dsp.dev/schemas/v1alpha1/result.schema.json',
+  title: 'DSP Operation Result',
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'id',
+    'tenant',
+    'planId',
+    'planHash',
+    'idempotencyKey',
+    'status',
+    'actor',
+    'createdAt',
+    'updatedAt',
+    'changes',
+    'verification',
+    'cancellationRequested',
+    'error',
+  ],
+  properties: {
+    id: { type: 'string', pattern: '^op_[0-9a-f]{24}$' },
+    tenant: { type: 'string' },
+    planId: { type: 'string' },
+    planHash: { type: 'string', pattern: '^sha256:[0-9a-f]{64}$' },
+    idempotencyKey: { type: 'string' },
+    status: {
+      enum: [
+        'created',
+        'running',
+        'partially_completed',
+        'completed',
+        'failed',
+        'verification_failed',
+        'cancelled',
+      ],
+    },
+    actor: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'id'],
+      properties: {
+        type: { enum: ['human', 'agent', 'system'] },
+        id: { type: 'string' },
+      },
+    },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+    changes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['changeId', 'resourceType', 'resourceKey', 'action', 'status', 'attempts'],
+        properties: {
+          changeId: { type: 'string' },
+          resourceType: { type: 'string' },
+          resourceKey: { type: 'string' },
+          action: { enum: ['create', 'update', 'delete', 'replace', 'noop', 'blocked'] },
+          status: {
+            enum: [
+              'pending',
+              'running',
+              'succeeded',
+              'failed',
+              'skipped',
+              'blocked',
+              'compensated',
+            ],
+          },
+          attempts: { type: 'integer', minimum: 0 },
+          startedAt: { type: 'string', format: 'date-time' },
+          finishedAt: { type: 'string', format: 'date-time' },
+          externalId: { type: ['string', 'null'] },
+          providerRequestId: { type: ['string', 'null'] },
+          // A succeeded change records `error: null` rather than omitting the
+          // field, so the contract has to admit null here.
+          error: { oneOf: [{ type: 'null' }, { $ref: '#/$defs/error' }] },
+        },
+      },
+    },
+    verification: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          additionalProperties: false,
+          required: ['operationId', 'status', 'satisfaction', 'verifiedAt', 'matched', 'unmatched'],
+          properties: {
+            operationId: { type: 'string' },
+            status: {
+              enum: [
+                'satisfied',
+                'partially_satisfied',
+                'not_satisfied',
+                'verification_failed',
+              ],
+            },
+            satisfaction: { type: 'number', minimum: 0, maximum: 1 },
+            verifiedAt: { type: 'string', format: 'date-time' },
+            matched: { type: 'array', items: { type: 'string' } },
+            unmatched: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['path', 'reason'],
+                properties: {
+                  path: { type: 'string' },
+                  reason: { type: 'string' },
+                  expected: {},
+                  actual: {},
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+    cancellationRequested: { type: 'boolean' },
+    error: { oneOf: [{ type: 'null' }, { $ref: '#/$defs/error' }] },
+  },
+  $defs: {
+    error: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['code', 'message', 'retryable'],
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+        retryable: { type: 'boolean' },
+        details: { type: 'object' },
+        requestId: { type: 'string' },
+      },
+    },
+  },
+}

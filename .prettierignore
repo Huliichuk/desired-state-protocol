@@ -1,0 +1,14 @@
+dist/
+node_modules/
+pnpm-lock.yaml
+*.tsbuildinfo
+coverage/
+
+# Generated from packages/protocol/src/schemas by the schema generator. Their
+# formatting is defined by `renderSchema`, and a drift test compares them
+# byte for byte, so Prettier must not reformat them.
+schemas/
+
+# Third-party text, kept verbatim.
+LICENSE
+.changeset/README.md

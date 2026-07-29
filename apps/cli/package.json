@@ -1,0 +1,29 @@
+{
+  "name": "@dsp/cli",
+  "version": "0.1.0",
+  "description": "Command line client for the Desired State Protocol",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "dsp": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@dsp/core": "workspace:*",
+    "@dsp/protocol": "workspace:*",
+    "commander": "^15.0.0"
+  }
+}

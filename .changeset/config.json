@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "fixed": [
+    [
+      "@dsp/protocol",
+      "@dsp/plan-engine",
+      "@dsp/policy-engine",
+      "@dsp/execution-engine",
+      "@dsp/verification-engine",
+      "@dsp/audit",
+      "@dsp/secret-store",
+      "@dsp/provider-sdk",
+      "@dsp/provider-mock",
+      "@dsp/core",
+      "@dsp/cli"
+    ]
+  ],
+  "linked": [],
+  "ignore": ["@dsp/server"]
+}

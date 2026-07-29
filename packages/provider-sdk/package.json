@@ -1,0 +1,41 @@
+{
+  "name": "@dsp/provider-sdk",
+  "version": "0.1.0",
+  "description": "SDK for authoring DSP providers, including the conformance suite",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./conformance": {
+      "types": "./dist/conformance/index.d.ts",
+      "default": "./dist/conformance/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@dsp/plan-engine": "workspace:*",
+    "@dsp/protocol": "workspace:*",
+    "@dsp/secret-store": "workspace:*"
+  },
+  "peerDependencies": {
+    "vitest": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
+  }
+}

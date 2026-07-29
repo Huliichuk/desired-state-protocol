@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+coverage/
+.dsp/
+*.sqlite
+*.sqlite-journal
+*.db
+.DS_Store
+.vscode/
+.idea/

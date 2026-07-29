@@ -1,0 +1,58 @@
+# A complete DSP Desired State document for the reference (mock) provider.
+#
+# Run it with:
+#   dsp validate --file examples/mock-workspace/desired-state.yaml
+#   dsp plan     --file examples/mock-workspace/desired-state.yaml
+#   dsp approve  <plan-id>
+#   dsp apply    <plan-id> --confirm
+#
+# Note what is NOT here: no createDatabase() call, no ordering, no ids. The
+# document says what should be true; the runtime works out the rest.
+apiVersion: dsp.dev/v1alpha1
+kind: MockWorkspace
+metadata:
+  name: dsp-demo
+  namespace: default
+  labels:
+    # Labels are metadata only. The runtime takes its environment from its own
+    # configuration, so a label can never talk policy into being weaker.
+    team: platform
+spec:
+  databases:
+    - name: main
+      engine: postgres
+      region: eu-central-1
+      sizeGb: 20
+      tables:
+        - name: users
+          columns:
+            - name: id
+              type: text
+            - name: email
+              type: text
+            - name: created_at
+              type: timestamp
+        - name: sessions
+          columns:
+            - name: id
+              type: text
+            - name: user_id
+              type: text
+            - name: expires_at
+              type: timestamp
+              nullable: true
+
+  users:
+    - email: founder@example.com
+      role: admin
+      displayName: Founder
+    - email: analyst@example.com
+      role: viewer
+      displayName: Analyst
+
+  subscriptions:
+    - user: founder@example.com
+      plan: pro
+      amountCents: 2900
+      currency: eur
+      active: true

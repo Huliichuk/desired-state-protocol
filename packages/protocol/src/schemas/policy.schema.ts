@@ -1,0 +1,85 @@
+import type { JsonSchema } from '../types/common.js'
+import { DSP_API_VERSION } from '../version.js'
+
+const stringOrArray = {
+  oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+}
+
+export const policySchema: JsonSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://dsp.dev/schemas/v1alpha1/policy.schema.json',
+  title: 'DSP Policy',
+  type: 'object',
+  additionalProperties: false,
+  required: ['apiVersion', 'kind', 'metadata', 'spec'],
+  properties: {
+    apiVersion: { const: DSP_API_VERSION },
+    kind: { const: 'Policy' },
+    metadata: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['name'],
+      properties: {
+        name: { type: 'string', minLength: 1, maxLength: 253 },
+        description: { type: 'string', maxLength: 2048 },
+      },
+    },
+    spec: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['rules'],
+      properties: {
+        rules: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['id', 'effect'],
+            properties: {
+              id: { type: 'string', minLength: 1, maxLength: 128 },
+              description: { type: 'string', maxLength: 2048 },
+              effect: { enum: ['allow', 'deny', 'warn', 'requireApproval'] },
+              message: { type: 'string', maxLength: 2048 },
+              minApprovals: { type: 'integer', minimum: 1 },
+              when: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  action: {
+                    oneOf: [
+                      { enum: ['create', 'update', 'delete', 'replace', 'noop', 'blocked'] },
+                      {
+                        type: 'array',
+                        items: {
+                          enum: ['create', 'update', 'delete', 'replace', 'noop', 'blocked'],
+                        },
+                      },
+                    ],
+                  },
+                  resourceType: stringOrArray,
+                  kind: stringOrArray,
+                  environment: stringOrArray,
+                  riskIn: {
+                    type: 'array',
+                    items: { enum: ['low', 'medium', 'high', 'critical'] },
+                  },
+                  destructive: { type: 'boolean' },
+                  pathPrefix: { type: 'array', items: { type: 'string' } },
+                },
+              },
+              constraints: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  maxChanges: { type: 'integer', minimum: 0 },
+                  maxTotalChanges: { type: 'integer', minimum: 0 },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+}

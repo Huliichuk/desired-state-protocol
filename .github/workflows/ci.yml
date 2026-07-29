@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: build, lint, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      # Node 22+ is required: the runtime uses the built-in node:sqlite.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format
+        run: pnpm format:check
+
+      - name: Test
+        run: pnpm test
+
+      # The published JSON Schemas are generated artifacts. If a protocol change
+      # forgot to regenerate them, the working tree is dirty here.
+      - name: Published schemas are in sync
+        run: |
+          node packages/protocol/dist/scripts/generate-schemas.js
+          git diff --exit-code -- schemas/
+
+  lifecycle:
+    name: end-to-end lifecycle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Walk discover -> validate -> plan -> approve -> apply -> verify
+        env:
+          DSP_AUTH_TOKEN: ci-token
+          DSP_PORT: '4040'
+          DSP_LOG_LEVEL: error
+          DSP_POLICY_DIR: examples/mock-workspace/policies
+          NO_COLOR: '1'
+        run: |
+          node apps/server/dist/main.js &
+          for _ in $(seq 1 60); do curl -sf localhost:4040/health >/dev/null && break; sleep 0.5; done
+
+          DSP="node apps/cli/dist/main.js --server http://127.0.0.1:4040 --token ci-token"
+          FILE=examples/mock-workspace/desired-state.yaml
+
+          $DSP discover
+          $DSP validate --file "$FILE"
+          $DSP plan --file "$FILE"
+
+          PLAN=$($DSP --json plan --file "$FILE" | node -e \
+            "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).metadata.id))")
+
+          # Applying without --confirm must refuse with exit 8 and change nothing.
+          set +e; $DSP apply "$PLAN"; test $? -eq 8 || exit 1; set -e
+
+          # Applying without approval must refuse with exit 3.
+          set +e; $DSP apply "$PLAN" --confirm; test $? -eq 3 || exit 1; set -e
+
+          $DSP approve "$PLAN" --by ci --reason "CI run"
+          $DSP apply "$PLAN" --confirm
+          $DSP audit verify
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t dsp-runtime:ci .
+
+      - name: Run it and exercise the lifecycle inside the container
+        run: |
+          docker run -d --name dsp -p 4040:4040 -e DSP_AUTH_TOKEN=ci-token dsp-runtime:ci
+          for _ in $(seq 1 60); do curl -sf localhost:4040/health >/dev/null && break; sleep 0.5; done
+
+          curl -sf localhost:4040/health
+          curl -sf localhost:4040/.well-known/dsp
+
+          DOC='{"desiredState":{"apiVersion":"dsp.dev/v1alpha1","kind":"MockWorkspace",
+                "metadata":{"name":"ci"},"spec":{"databases":[{"name":"main",
+                "engine":"postgres","region":"eu"}]}}}'
+          PLAN=$(curl -sf -X POST -H "Authorization: Bearer ci-token" \
+            -H "Content-Type: application/json" -d "$DOC" \
+            localhost:4040/v1/plans | node -e \
+            "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).metadata.id))")
+
+          curl -sf -X POST -H "Authorization: Bearer ci-token" \
+            -H "Idempotency-Key: ci-1" \
+            "localhost:4040/v1/plans/$PLAN/apply" | tee /dev/stderr | grep -q '"status":"completed"'
+
+          docker rm -f dsp
