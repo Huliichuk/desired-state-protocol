@@ -1,5 +1,20 @@
 # @dsp/core
 
+## 0.3.0
+
+### Patch Changes
+
+- Updated dependencies [c813e70]
+  - @dsp/execution-engine@0.3.0
+  - @dsp/protocol@0.3.0
+  - @dsp/plan-engine@0.3.0
+  - @dsp/policy-engine@0.3.0
+  - @dsp/contract-engine@0.3.0
+  - @dsp/verification-engine@0.3.0
+  - @dsp/audit@0.3.0
+  - @dsp/secret-store@0.3.0
+  - @dsp/provider-sdk@0.3.0
+
 ## 0.2.0
 
 ### Patch Changes

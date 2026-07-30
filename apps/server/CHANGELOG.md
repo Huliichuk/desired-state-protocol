@@ -1,5 +1,17 @@
 # @dsp/server
 
+## 0.3.0
+
+### Patch Changes
+
+- @dsp/core@0.3.0
+- @dsp/protocol@0.3.0
+- @dsp/policy-engine@0.3.0
+- @dsp/audit@0.3.0
+- @dsp/secret-store@0.3.0
+- @dsp/provider-sdk@0.3.0
+- @dsp/provider-mock@0.3.0
+
 ## 0.2.0
 
 ### Patch Changes
