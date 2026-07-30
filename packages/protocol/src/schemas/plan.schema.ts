@@ -1,6 +1,6 @@
 import type { JsonSchema } from '../types/common.js'
 import { DSP_API_VERSION } from '../version.js'
-import { contractCheckSchema } from './fragments.js'
+import { contractCheckSchema, planOwnershipSchema } from './fragments.js'
 
 const riskLevel = { enum: ['low', 'medium', 'high', 'critical'] }
 
@@ -33,6 +33,7 @@ export const planSchema: JsonSchema = {
     'approvals',
     'policyEvaluation',
     'contract',
+    'ownership',
     'executable',
   ],
   properties: {
@@ -123,6 +124,7 @@ export const planSchema: JsonSchema = {
       },
     },
     contract: contractCheckSchema,
+    ownership: planOwnershipSchema,
     executable: { type: 'boolean' },
   },
   $defs: {

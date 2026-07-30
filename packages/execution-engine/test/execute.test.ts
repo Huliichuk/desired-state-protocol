@@ -67,6 +67,7 @@ function plan(changes: PlanChange[]): DSPPlan {
     approvals: { required: false, requirements: [] },
     policyEvaluation: { allowed: true, decisions: [], requiredApprovals: [] },
     contract: null,
+    ownership: null,
     executable: true,
   }
 }

@@ -164,6 +164,7 @@ describe('rendering', () => {
       requirements: [{ id: 'apr_1', reason: 'needs a human', minApprovals: 1, risk: 'medium' }],
     },
     contract: null,
+    ownership: null,
     policyEvaluation: {
       allowed: true,
       decisions: [

@@ -2,6 +2,8 @@ import {
   DSPError,
   assertDocumentLimits,
   documentNamespace,
+  fieldOwnerFor,
+  ownershipScope,
   hashEquals,
   operationId as newOperationId,
   mergeValidationResults,
@@ -28,6 +30,7 @@ import { executePlan, type Sleep } from '@dsp/execution-engine'
 import { buildPlan, computePlanHash, isPlanExpired } from '@dsp/plan-engine'
 import { evaluatePolicies, policyBundleHash } from '@dsp/policy-engine'
 import { evaluatePredicates, validateContract } from '@dsp/contract-engine'
+import { claimsToRecord, normalizeProjection, resolveOwnership } from '@dsp/plan-engine'
 import type {
   DSPProvider,
   Logger,
@@ -263,6 +266,26 @@ export class DSPRuntime {
 
       this.#assertResourceLimits(desiredProjection, currentProjection)
 
+      // Ownership is resolved against what the runtime already records, so a field
+      // another document is responsible for is visible in the plan rather than
+      // quietly overwritten at apply time.
+      const owner = fieldOwnerFor({
+        kind: document.kind,
+        namespace: documentNamespace(document),
+        name: document.metadata.name,
+      })
+      // The scope is the slice of the world the provider just inspected, so two
+      // documents pointed at different workspaces never collide over a shared key.
+      const scope = ownershipScope({ provider: provider.name, resourceId: current.resourceId })
+      const keys = resourceKeysInPlay(desiredProjection, currentProjection)
+      const ownership = resolveOwnership({
+        owner,
+        scope,
+        desired: normalizeProjection(desiredProjection),
+        current: normalizeProjection(currentProjection),
+        snapshot: await this.#store.ownershipFor(scope, keys),
+      })
+
       const plan = await buildPlan({
         desired: document,
         desiredProjection,
@@ -281,6 +304,7 @@ export class DSPRuntime {
         // The client's own bounds, checked against what it asked for. A document
         // that contradicts itself never reaches a provider. Null rather than a
         // vacuously satisfied check when no contract was declared at all.
+        ownership,
         contract:
           document.contract === undefined
             ? null
@@ -441,6 +465,7 @@ export class DSPRuntime {
 
     await this.#assertPlanIntegrity(plan)
     await this.#assertPolicyStillAllows(plan, record)
+    await this.#assertOwnershipStillHeld(plan)
     await this.#assertApproved(plan, input)
 
     const { context, dispose } = this.#providerContext(provider, record.desiredState)
@@ -544,6 +569,8 @@ export class DSPRuntime {
 
       // Verification is not optional: an apply that is not verified is only a
       // claim about the world.
+      await this.#recordOwnership(plan, operation, record, provider)
+
       const verification = await this.#runVerification(operation, record, provider, input.actor)
       operation = await this.#applyVerification(operation, verification)
       return operation
@@ -877,6 +904,92 @@ export class DSPRuntime {
     }
   }
 
+  /**
+   * A plan is built against the ownership record as it was. Between then and now
+   * another document may have taken a field, so the check is repeated — the same
+   * reason policy is re-evaluated before executing.
+   */
+  async #assertOwnershipStillHeld(plan: DSPPlan): Promise<void> {
+    const ownership = plan.ownership
+    if (ownership === null) return
+
+    const scope = ownership.claims[0]?.scope ?? ownership.conflicts[0]?.scope
+    const keys = [
+      ...new Set([
+        ...ownership.claims.map((claim) => claim.resourceKey),
+        ...ownership.conflicts.map((conflict) => conflict.resourceKey),
+      ]),
+    ]
+    if (keys.length === 0 || scope === undefined) return
+
+    const held = new Map<string, string>()
+    for (const claim of (await this.#store.ownershipFor(scope, keys)).claims) {
+      for (const path of claim.paths) held.set(`${claim.resourceKey} ${path}`, claim.owner)
+    }
+
+    const taken = ownership.claims.flatMap((claim) =>
+      claim.paths
+        .map((path) => ({ path, owner: held.get(`${claim.resourceKey} ${path}`) }))
+        .filter((entry) => entry.owner !== undefined && entry.owner !== ownership.owner)
+        .map((entry) => ({ resourceKey: claim.resourceKey, path: entry.path, owner: entry.owner })),
+    )
+
+    if (taken.length > 0) {
+      throw new DSPError(
+        'FIELD_OWNERSHIP_CONFLICT',
+        'Another document took ownership of a field this plan claims; a new plan is required',
+        { details: { fields: taken } },
+      )
+    }
+  }
+
+  /**
+   * Records what the document now manages.
+   *
+   * Only resources whose change actually landed are claimed: a blocked or failed
+   * change means the document did not get to set those fields, so claiming them
+   * would make it responsible for values it never wrote.
+   */
+  async #recordOwnership(
+    plan: DSPPlan,
+    operation: OperationRecord,
+    record: PlanRecord,
+    provider: DSPProvider,
+  ): Promise<void> {
+    const ownership = plan.ownership
+    if (ownership === null) return
+
+    const landed = new Set(
+      operation.changes
+        .filter((change) => change.status === 'succeeded' || change.action === 'noop')
+        .map((change) => change.resourceKey),
+    )
+    const skipResourceKeys = new Set(
+      plan.changes.map((change) => change.resourceKey).filter((key) => !landed.has(key)),
+    )
+
+    // Inspected again for the scope: the provider's resourceId is what identifies
+    // which world these claims belong to.
+    const { context, dispose } = this.#providerContext(provider, record.desiredState)
+    let observed
+    try {
+      observed = await provider.inspect(context, record.desiredState)
+    } finally {
+      dispose()
+    }
+    const desired = normalizeProjection(await provider.normalizeDesired(record.desiredState))
+
+    await this.#store.recordOwnership({
+      claims: claimsToRecord({
+        owner: ownership.owner,
+        scope: ownershipScope({ provider: provider.name, resourceId: observed.resourceId }),
+        desired,
+        skipResourceKeys,
+      }),
+      releases: ownership.releases,
+    })
+  }
+
   async #runVerification(
     operation: OperationRecord,
     record: PlanRecord,
@@ -1031,4 +1144,18 @@ function issueFromError(error: unknown, path: string): ValidationIssue {
     return { code: error.code, path, message: error.message }
   }
   return { code: 'VALIDATION_FAILED', path, message: 'Document could not be validated' }
+}
+
+/**
+ * Every resource key a plan could concern: what the document declares and what the
+ * world already holds. Scoping the ownership read to these avoids loading the whole
+ * record to plan one document.
+ */
+function resourceKeysInPlay(desired: ResourceProjection, current: ResourceProjection): string[] {
+  return [
+    ...new Set([
+      ...desired.resources.map((resource) => resource.key),
+      ...current.resources.map((resource) => resource.key),
+    ]),
+  ].sort()
 }

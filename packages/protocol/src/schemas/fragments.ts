@@ -61,3 +61,54 @@ export const contractCheckSchema: JsonSchema = {
     },
   ],
 }
+
+const ownershipClaim: JsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['scope', 'resourceKey', 'paths', 'owner'],
+  properties: {
+    // The world slice: a resource key is only unique inside one.
+    scope: { type: 'string' },
+    resourceKey: { type: 'string' },
+    paths: { type: 'array', items: { type: 'string' } },
+    owner: { type: 'string' },
+  },
+}
+
+/** What a plan does to field ownership. */
+export const planOwnershipSchema: JsonSchema = {
+  oneOf: [
+    { type: 'null' },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['owner', 'claims', 'releases', 'conflicts'],
+      properties: {
+        owner: { type: 'string' },
+        claims: { type: 'array', items: ownershipClaim },
+        releases: { type: 'array', items: ownershipClaim },
+        conflicts: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['scope', 'resourceKey', 'conflicts'],
+            properties: {
+              scope: { type: 'string' },
+              resourceKey: { type: 'string' },
+              conflicts: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['path', 'owner'],
+                  properties: { path: { type: 'string' }, owner: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  ],
+}

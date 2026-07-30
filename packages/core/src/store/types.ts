@@ -1,4 +1,11 @@
-import type { ApprovalRecord, DSPPlan, DesiredStateDocument, OperationRecord } from '@dsp/protocol'
+import type {
+  OwnershipClaim,
+  OwnershipSnapshot,
+  ApprovalRecord,
+  DSPPlan,
+  DesiredStateDocument,
+  OperationRecord,
+} from '@dsp/protocol'
 
 export interface PlanOptions {
   allowDelete?: boolean
@@ -55,6 +62,15 @@ export interface RuntimeStore {
     idempotencyKey: string
     operationId: string
   }): Promise<IdempotencyReservation>
+
+  /** Claims held on the given resource keys. */
+  ownershipFor(scope: string, resourceKeys: readonly string[]): Promise<OwnershipSnapshot>
+
+  /** Applies the ownership outcome of one operation atomically. */
+  recordOwnership(input: {
+    claims: readonly OwnershipClaim[]
+    releases: readonly OwnershipClaim[]
+  }): Promise<void>
 
   requestCancellation(operationId: string): Promise<boolean>
 

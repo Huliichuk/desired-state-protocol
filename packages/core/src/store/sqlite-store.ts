@@ -1,5 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite'
-import type { ApprovalRecord, AuditEvent, OperationRecord } from '@dsp/protocol'
+import type {
+  ApprovalRecord,
+  AuditEvent,
+  OperationRecord,
+  OwnershipClaim,
+  OwnershipSnapshot,
+} from '@dsp/protocol'
 import type { AuditQuery, AuditStore } from '@dsp/audit'
 import { openDatabase } from './sqlite.js'
 import type { IdempotencyReservation, PlanRecord, RuntimeStore } from './types.js'
@@ -47,10 +53,33 @@ CREATE TABLE IF NOT EXISTS audit_events (
   sequence INTEGER NOT NULL UNIQUE,
   record   TEXT NOT NULL
 );
+
+-- One owner per field. The primary key is the invariant: two documents cannot both
+-- be responsible for the same attribute of the same resource.
+CREATE TABLE IF NOT EXISTS field_ownership (
+  scope        TEXT NOT NULL,
+  resource_key TEXT NOT NULL,
+  path         TEXT NOT NULL,
+  owner        TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  -- Scoped, because a resource key is only unique inside one document's world.
+  -- Without the scope, the "main" database of two different workspaces would look
+  -- like one contested resource.
+  PRIMARY KEY (scope, resource_key, path)
+);
+
+CREATE INDEX IF NOT EXISTS field_ownership_owner ON field_ownership (owner);
 `
 
 interface RecordRow {
   record: string
+}
+
+interface OwnershipRow {
+  scope: string
+  resource_key: string
+  path: string
+  owner: string
 }
 
 /**
@@ -263,6 +292,81 @@ export class SqliteRuntimeStore implements RuntimeStore, AuditStore {
   }
 
   /** Idempotent: a shutdown path may be reached more than once. */
+  /**
+   * Claims held on the given resources. Scoped to the keys in play so planning does
+   * not read the whole table.
+   */
+  async ownershipFor(scope: string, resourceKeys: readonly string[]): Promise<OwnershipSnapshot> {
+    if (resourceKeys.length === 0) return { claims: [] }
+
+    const placeholders = resourceKeys.map(() => '?').join(', ')
+    const rows = this.#db
+      .prepare(
+        `SELECT scope, resource_key, path, owner FROM field_ownership
+         WHERE scope = ? AND resource_key IN (${placeholders})
+         ORDER BY resource_key, path`,
+      )
+      .all(scope, ...resourceKeys) as unknown as OwnershipRow[]
+
+    const byResource = new Map<string, { owner: string; paths: string[] }>()
+    for (const row of rows) {
+      // The key is per (resource, owner): one resource may have fields held by more
+      // than one document, and each is its own claim.
+      const composite = `${row.resource_key}\u0000${row.owner}`
+      const bucket = byResource.get(composite) ?? { owner: row.owner, paths: [] }
+      bucket.paths.push(row.path)
+      byResource.set(composite, bucket)
+    }
+
+    return {
+      claims: [...byResource.entries()].map(([composite, value]) => ({
+        scope,
+        resourceKey: composite.split('\u0000')[0] ?? '',
+        paths: value.paths,
+        owner: value.owner,
+      })),
+    }
+  }
+
+  /**
+   * Records the outcome of an apply: paths taken and paths given up, in one
+   * transaction so a crash cannot leave half a claim.
+   */
+  async recordOwnership(input: {
+    claims: readonly OwnershipClaim[]
+    releases: readonly OwnershipClaim[]
+  }): Promise<void> {
+    const claim = this.#db.prepare(
+      `INSERT INTO field_ownership (scope, resource_key, path, owner, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(scope, resource_key, path) DO UPDATE SET
+         owner = excluded.owner,
+         updated_at = excluded.updated_at`,
+    )
+    const release = this.#db.prepare(
+      // Guarded by owner: releasing must never drop another document's claim.
+      `DELETE FROM field_ownership
+       WHERE scope = ? AND resource_key = ? AND path = ? AND owner = ?`,
+    )
+    const now = this.#now().toISOString()
+
+    this.#db.exec('BEGIN')
+    try {
+      for (const entry of input.releases) {
+        for (const path of entry.paths)
+          release.run(entry.scope, entry.resourceKey, path, entry.owner)
+      }
+      for (const entry of input.claims) {
+        for (const path of entry.paths)
+          claim.run(entry.scope, entry.resourceKey, path, entry.owner, now)
+      }
+      this.#db.exec('COMMIT')
+    } catch (error) {
+      this.#db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
   close(): void {
     if (this.#closed) return
     this.#closed = true

@@ -316,6 +316,93 @@ _intended_ action, so that blocking does not change a change's identity.
 `true` only for `update` and `noop`: a `create` can only be undone by deleting,
 which a runtime with destructive operations disabled cannot do.
 
+## 8.3 Field ownership
+
+A document says what should be true. This section says what it is **responsible
+for**, which is a different claim and was previously unstated.
+
+A runtime MUST record, for each attribute path of each resource, which document is
+responsible for it. The owner identity is `kind/namespace/name`. Ownership MUST be
+recorded by the runtime, not by a provider: a provider forced to store it — in vendor
+metadata, say — would invent a different scheme in every adapter, and none of them
+would be visible to the protocol.
+
+### 8.3.1 Apply sets only what is declared
+
+An `update` MUST set the attribute paths the document declares and **MUST NOT** clear
+paths it does not declare.
+
+This was previously unspecified, and the omission was not harmless: a provider that
+replaced an attribute set and one that merged into it were both conforming, and
+produced different world states from the same document change. Worse, the divergence
+was invisible to verification, which only checks declared paths.
+
+### 8.3.2 Claims, releases and conflicts
+
+A plan MUST report what it does to ownership:
+
+```ts
+interface PlanOwnership {
+  owner: FieldOwner
+  claims: OwnershipClaim[]
+  releases: OwnershipClaim[]
+  conflicts: ResourceConflict[]
+}
+```
+
+**Claims** are paths the document does not own yet and will own once applied.
+
+**Releases** are paths the document owns and no longer declares. On release the
+runtime MUST stop recording responsibility for the path, and the value in the
+external system **MUST be left as it is**. A runtime MUST report every release in the
+plan: a field silently retaining a value nobody manages is the defect this section
+exists to remove. Removing a value is a separate act, expressed by declaring the
+removal, not by dropping the field from the document.
+
+**Conflicts** are paths another document already owns. A runtime MUST convert any
+change that declares a conflicted path to action `blocked`, with `blockedBy` set to
+`FIELD_OWNERSHIP_CONFLICT`, preserving `before` and `after` so a reviewer sees both
+the intent and the current owner. A `noop` MUST NOT be blocked: it sets nothing, so
+it takes nothing from anyone.
+
+A runtime **MUST NOT** silently take a field from another owner. Two documents that
+both declare a field would otherwise overwrite each other on every apply, each
+reading the other's value as drift, with the last apply winning and no record that a
+conflict existed.
+
+### 8.3.3 Ownership is part of plan identity
+
+`PlanOwnership` MUST be covered by the plan hash (§12.1). A plan built when a field
+was free and applied after another document took it would otherwise execute against
+an ownership record it never saw.
+
+A runtime MUST re-check its claims immediately before executing, for the same reason
+it re-evaluates policy (§15), and MUST refuse with `FIELD_OWNERSHIP_CONFLICT` when a
+claimed path has since been taken.
+
+### 8.3.4 What is recorded, and when
+
+A runtime MUST record claims only for resources whose change actually landed —
+succeeded, or was a `noop`. A blocked or failed change means the document never set
+those fields, and claiming them would make it responsible for values it did not
+write.
+
+Recording MUST be atomic with respect to releases: a crash between the two MUST NOT
+leave a path both released and claimed, or neither.
+
+### 8.3.5 Deliberately not in this version
+
+- **Force-taking a field.** There is no way to override another owner. The
+  resolution is to change one of the documents.
+- **Co-ownership.** Exactly one document owns a path. Two documents may own
+  different paths on the same resource.
+- **Removal on release.** Releasing stops management; it does not clear the value.
+  Kubernetes Server-Side Apply removes on release, but a DSP provider often cannot:
+  a Stripe price has no way to unset `currency`.
+- **Ownership by anything other than a document.** A human editing a resource
+  through a vendor dashboard does not become an owner, and DSP will not notice the
+  edit except as drift.
+
 ## 9. Dependency ordering
 
 A resource instance MAY declare `dependsOn`, a list of resource keys that MUST
@@ -460,7 +547,8 @@ A plan MUST be immutable once created.
 `planHash` MUST be the canonical hash of exactly:
 
 `apiVersion`, `kind`, `desiredStateHash`, `currentStateHash`, `policyBundleHash`,
-`summary`, `changes`, `approvals`, `policyEvaluation`, `contract`, `executable`.
+`summary`, `changes`, `approvals`, `policyEvaluation`, `contract`, `ownership`,
+`executable`.
 
 Covering `contract` means a changed goal produces a different plan, so an approval
 cannot carry across a change of intent even when the resulting changes are identical.
@@ -568,8 +656,10 @@ A runtime MUST check the following preconditions, in this order:
    `metadata.policyBundleHash`, refuse with `POLICY_DENIED`; a new plan is required.
 6. **Policy re-evaluation.** Re-evaluate the bundle against the plan's changes; a
    denial is `POLICY_DENIED`.
-7. **Approvals.** Unsatisfied requirements are `APPROVAL_REQUIRED`.
-8. **Drift.** Re-read the revision; see §19.
+7. **Ownership.** Re-check the paths the plan claims; one taken since is
+   `FIELD_OWNERSHIP_CONFLICT` (§8.3.3).
+8. **Approvals.** Unsatisfied requirements are `APPROVAL_REQUIRED`.
+9. **Drift.** Re-read the revision; see §19.
 
 Only then MUST the runtime create the operation, claim the idempotency key
 atomically, and execute.
@@ -781,6 +871,8 @@ A provider MUST:
 - express document nesting as explicit `dependsOn` edges
 - make `applyChange` **idempotent**: applying the same change twice MUST leave the
   same observed state and MUST NOT create a duplicate
+- on an `update`, set only the attribute paths the change declares, and leave every
+  other observed attribute untouched (§8.3.1)
 - honour the abort signal on its context
 - declare every credential-shaped attribute it accepts in `sensitiveFields`
 - report failures with an accurate `retryable` flag

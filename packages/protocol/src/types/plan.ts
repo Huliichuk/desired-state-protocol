@@ -2,6 +2,7 @@ import type { DspApiVersion } from '../version.js'
 import type { RiskLevel } from './common.js'
 import type { PolicyEffect } from './policy.js'
 import type { ContractCheck } from './contract.js'
+import type { PlanOwnership } from './ownership.js'
 
 export type ChangeAction = 'create' | 'update' | 'delete' | 'replace' | 'noop' | 'blocked'
 
@@ -110,6 +111,11 @@ export interface DSPPlan {
    * Null when the document declared none.
    */
   contract: ContractCheck | null
+  /**
+   * What this plan does to field ownership: what it claims, what it releases, and
+   * where another document already owns a field it declares.
+   */
+  ownership: PlanOwnership | null
   executable: boolean
 }
 
@@ -128,6 +134,7 @@ export interface PlanHashInput {
   approvals: PlanApprovals
   policyEvaluation: PolicyEvaluationResult
   contract: ContractCheck | null
+  ownership: PlanOwnership | null
   executable: boolean
 }
 

@@ -245,10 +245,21 @@ export class MockProvider implements DSPProvider<MockWorkspaceSpec, MockWorkspac
       })
     }
 
+    // An update sets the fields the document declares and leaves the rest alone.
+    // Replacing the whole attribute set would silently clear a field this document
+    // stopped declaring — which the plan now reports as a release, with the value
+    // retained. See SPEC.md on field ownership.
+    const existing =
+      change.action === 'create' ? undefined : this.#backend.get(id, change.resourceKey)
+    const merged =
+      existing === null || existing === undefined
+        ? (attributes as Record<string, unknown>)
+        : { ...existing.attributes, ...(attributes as Record<string, unknown>) }
+
     const stored = this.#backend.upsert(id, {
       resourceType: change.resourceType,
       key: change.resourceKey,
-      attributes: attributes as Record<string, unknown>,
+      attributes: merged,
     })
 
     if (simulate.driftResourceKey === change.resourceKey) {

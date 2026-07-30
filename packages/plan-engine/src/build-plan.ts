@@ -12,6 +12,7 @@ import {
   type PlanHashInput,
   type PlanSummary,
   type ContractCheck,
+  type PlanOwnership,
   type PolicyEvaluationResult,
   type ProtocolLimits,
   type ResourceProjection,
@@ -44,6 +45,11 @@ export interface BuildPlanInput {
    * expression language, and so the result is a plain input to the hash.
    */
   contract?: ContractCheck | null
+  /**
+   * Ownership resolved against the runtime's record. Passed in rather than computed
+   * here so the plan engine stays independent of where claims are stored.
+   */
+  ownership?: PlanOwnership | null
   /**
    * Optional provider hook, applied after the diff and before risk scoring.
    * It may only annotate existing changes: adding, removing or re-typing a
@@ -96,7 +102,11 @@ export async function buildPlan(input: BuildPlanInput): Promise<DSPPlan> {
       ? ordered
       : assertRefinement(ordered, await input.refineChanges(ordered))
 
-  const changes = withChangeRisk(refined, riskContext)
+  // A field another document owns is not this document's to set. Blocking here
+  // rather than at apply time means the collision is visible in the plan, with the
+  // owner named, instead of two documents overwriting each other silently.
+  const owned = blockConflicted(withChangeRisk(refined, riskContext), input.ownership ?? null)
+  const changes = owned
 
   const risk = scorePlan(changes, riskContext)
   const policyEvaluation = input.evaluatePolicies({ changes, risk })
@@ -107,6 +117,7 @@ export async function buildPlan(input: BuildPlanInput): Promise<DSPPlan> {
     requirements: policyEvaluation.requiredApprovals,
   }
   const contract = input.contract ?? null
+  const ownership = input.ownership ?? null
   // A document whose own declared constraints do not hold is internally
   // contradictory, so it is not executable. This is the client catching its own
   // mistake; the operator's control is the policy bundle.
@@ -123,6 +134,7 @@ export async function buildPlan(input: BuildPlanInput): Promise<DSPPlan> {
     approvals,
     policyEvaluation,
     contract,
+    ownership,
     executable,
   }
   const planHash = hashCanonical(hashInput)
@@ -149,6 +161,7 @@ export async function buildPlan(input: BuildPlanInput): Promise<DSPPlan> {
     approvals,
     policyEvaluation,
     contract,
+    ownership,
     executable,
   }
 }
@@ -169,6 +182,7 @@ export function computePlanHash(plan: DSPPlan): string {
     approvals: plan.approvals,
     policyEvaluation: plan.policyEvaluation,
     contract: plan.contract,
+    ownership: plan.ownership,
     executable: plan.executable,
   }
   return hashCanonical(hashInput)
@@ -176,6 +190,36 @@ export function computePlanHash(plan: DSPPlan): string {
 
 export function isPlanExpired(plan: DSPPlan, now: Date): boolean {
   return Date.parse(plan.metadata.expiresAt) <= now.getTime()
+}
+
+/**
+ * Turns a change into `blocked` when any field it declares is owned elsewhere.
+ *
+ * `before` and `after` are kept, as with a blocked deletion, so the plan still shows
+ * what the document wanted and who is in the way.
+ */
+function blockConflicted(changes: PlanChange[], ownership: PlanOwnership | null): PlanChange[] {
+  if (ownership === null || ownership.conflicts.length === 0) return changes
+
+  const byKey = new Map(ownership.conflicts.map((entry) => [entry.resourceKey, entry.conflicts]))
+
+  return changes.map((change) => {
+    const conflicts = byKey.get(change.resourceKey)
+    if (conflicts === undefined || conflicts.length === 0) return change
+    // Nothing is being set on a noop, so nothing is being taken from anyone.
+    if (change.action === 'noop' || change.action === 'blocked') return change
+
+    const described = conflicts
+      .map((conflict) => `${conflict.path} (owned by ${conflict.owner})`)
+      .join(', ')
+
+    return {
+      ...change,
+      action: 'blocked' as const,
+      blockedBy: 'FIELD_OWNERSHIP_CONFLICT',
+      reason: `${change.reason}; blocked because another document owns ${described}`,
+    }
+  })
 }
 
 function summarize(changes: readonly PlanChange[], risk: PlanRisk): PlanSummary {
