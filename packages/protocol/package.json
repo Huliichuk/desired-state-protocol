@@ -1,6 +1,6 @@
 {
   "name": "@dsp/protocol",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "DSP protocol types, canonical JSON, hashing and JSON Schemas",
   "type": "module",
   "license": "Apache-2.0",

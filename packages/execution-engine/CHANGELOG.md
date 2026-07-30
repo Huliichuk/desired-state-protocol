@@ -1,5 +1,13 @@
 # @dsp/execution-engine
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [9ec39b5]
+  - @dsp/protocol@0.4.0
+  - @dsp/provider-sdk@0.4.0
+
 ## 0.3.0
 
 ### Patch Changes
