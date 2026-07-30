@@ -25,6 +25,7 @@
       "@dsp/verification-engine": ["./packages/verification-engine/src/index.ts"],
       "@dsp/audit": ["./packages/audit/src/index.ts"],
       "@dsp/provider-mock": ["./packages/provider-mock/src/index.ts"],
+      "@dsp/provider-stripe": ["./packages/provider-stripe/src/index.ts"],
       "@dsp/core": ["./packages/core/src/index.ts"]
     }
   },

@@ -17,6 +17,7 @@
       "@dsp/secret-store",
       "@dsp/provider-sdk",
       "@dsp/provider-mock",
+      "@dsp/provider-stripe",
       "@dsp/core",
       "@dsp/cli",
       "@dsp/server"

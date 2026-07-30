@@ -1,0 +1,25 @@
+{
+  "name": "@dsp/provider-stripe",
+  "version": "0.2.0",
+  "description": "DSP provider for the Stripe product catalogue: products and prices",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@dsp/protocol": "workspace:*",
+    "@dsp/provider-sdk": "workspace:*"
+  }
+}

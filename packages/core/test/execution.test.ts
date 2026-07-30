@@ -115,7 +115,7 @@ describe('partial failure', () => {
     const table = operation.changes.find((change) => change.resourceKey === 'mock.table/main.users')
     expect(table?.status).toBe('skipped')
     expect(table?.attempts).toBe(0)
-    expect(table?.error?.message).toContain('dependencies did not succeed')
+    expect(table?.error?.message).toContain('dependencies were not satisfied')
     expect(h.backend.get(WORKSPACE, 'mock.table/main.users')).toBeNull()
   })
 

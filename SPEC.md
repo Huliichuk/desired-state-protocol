@@ -597,8 +597,12 @@ A runtime MUST:
 - execute only changes contained in the plan, in the plan's order
 - never execute a `blocked` change; record it as `blocked`
 - record a `noop` change as `skipped` without calling the provider
-- skip a change whose dependencies did not succeed, recording an error, rather than
-  attempting it
+- skip a change whose dependencies are not satisfied, recording an error, rather
+  than attempting it. A dependency is satisfied when it succeeded, and also when it
+  was a `noop`: a noop means the resource is already in the desired state, which is
+  what the dependency asked for. A failed, blocked, or transitively skipped
+  dependency does not satisfy it. Requiring success alone would make it impossible
+  to add a resource under a parent that already exists.
 - never re-execute a change already recorded as `succeeded`
 - retry **only** errors marked retryable, with exponential backoff, up to a
   configured attempt limit

@@ -23,6 +23,7 @@ export default defineConfig({
       '@dsp/verification-engine': src('verification-engine'),
       '@dsp/audit': src('audit'),
       '@dsp/provider-mock': src('provider-mock'),
+      '@dsp/provider-stripe': src('provider-stripe'),
       '@dsp/core': src('core'),
     },
   },

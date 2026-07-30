@@ -41,7 +41,7 @@ export interface ExecutePlanInput {
  *   - only changes contained in the plan are executed
  *   - changes already recorded as `succeeded` are never executed again
  *   - `noop` changes are skipped, `blocked` changes are never executed
- *   - a change whose dependency did not succeed is skipped, not attempted
+ *   - a change whose dependency is not satisfied is skipped, not attempted
  *   - only retryable provider errors are retried, with exponential backoff
  */
 export async function executePlan(input: ExecutePlanInput): Promise<OperationRecord> {
@@ -135,7 +135,7 @@ async function runChange({
     return { ...base, status: 'skipped', finishedAt: now().toISOString() }
   }
 
-  const unmet = change.dependencies.filter((id) => records.get(id)?.status !== 'succeeded')
+  const unmet = change.dependencies.filter((id) => !dependencySatisfied(records.get(id)))
   if (unmet.length > 0) {
     return {
       ...base,
@@ -143,7 +143,7 @@ async function runChange({
       finishedAt: now().toISOString(),
       error: {
         code: 'PROVIDER_ERROR',
-        message: `Skipped because dependencies did not succeed: ${unmet.join(', ')}`,
+        message: `Skipped because dependencies were not satisfied: ${unmet.join(', ')}`,
         retryable: false,
         details: { dependencies: unmet },
       },
@@ -262,4 +262,20 @@ export function finalStatus(changes: readonly ChangeExecutionRecord[]): Operatio
   if (!incomplete) return 'completed'
   if (succeeded === 0 && has('failed')) return 'failed'
   return 'partially_completed'
+}
+
+/**
+ * A dependency asks for a resource to exist before the dependent one is applied.
+ *
+ * Succeeding satisfies that. So does a `noop`: a noop means the resource is already
+ * in the desired state, which is precisely what the dependency wanted. Requiring
+ * `succeeded` alone meant that adding a child to a parent that already existed was
+ * skipped — a new price under an existing product, a table in an existing database,
+ * a record in an existing zone. A failed, blocked, or transitively skipped
+ * dependency does not satisfy it.
+ */
+function dependencySatisfied(record: ChangeExecutionRecord | undefined): boolean {
+  if (record === undefined) return false
+  if (record.status === 'succeeded') return true
+  return record.action === 'noop' && record.status === 'skipped'
 }
