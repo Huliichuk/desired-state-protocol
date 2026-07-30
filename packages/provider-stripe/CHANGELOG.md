@@ -1,8 +1,8 @@
-# @dsp/execution-engine
+# @dsp/provider-stripe
 
 ## 0.3.0
 
-### Patch Changes
+### Minor Changes
 
 - c813e70: Add a Stripe provider for products and prices, and fix the bug it found.
 
@@ -27,28 +27,8 @@
 
   The executor had no direct tests — it was only exercised through the runtime, whose
   scenarios never added a child under an existing parent. It has them now.
-  - @dsp/protocol@0.3.0
-  - @dsp/provider-sdk@0.3.0
-
-## 0.2.0
 
 ### Patch Changes
 
-- Updated dependencies [abeead5]
-  - @dsp/protocol@0.2.0
-  - @dsp/provider-sdk@0.2.0
-
-## 0.1.2
-
-### Patch Changes
-
-- Updated dependencies [6b01211]
-  - @dsp/protocol@0.1.2
-  - @dsp/provider-sdk@0.1.2
-
-## 0.1.1
-
-### Patch Changes
-
-- @dsp/protocol@0.1.1
-- @dsp/provider-sdk@0.1.1
+- @dsp/protocol@0.3.0
+- @dsp/provider-sdk@0.3.0

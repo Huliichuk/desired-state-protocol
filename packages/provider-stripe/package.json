@@ -1,6 +1,6 @@
 {
   "name": "@dsp/provider-stripe",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "DSP provider for the Stripe product catalogue: products and prices",
   "type": "module",
   "license": "Apache-2.0",
